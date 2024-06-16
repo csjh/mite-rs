@@ -1,0 +1,11 @@
+[package]
+name = "mite-rs"
+version = "0.1.0"
+authors = ["csjh"]
+description = "mite-rs"
+license = "MIT"
+repository = "https://github.com/csjh/mite-rs"
+edition = "2021"
+
+[profile.dev]
+debug = false
