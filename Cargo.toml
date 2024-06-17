@@ -9,3 +9,10 @@ edition = "2021"
 
 [profile.dev]
 debug = false
+opt-level = 1
+
+[build-dependencies]
+bindgen = "0.69.4"
+
+[features]
+bindings = []
