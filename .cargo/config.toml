@@ -1,0 +1,9 @@
+[build]
+target = "wasm32-unknown-emscripten"
+rustflags = [
+    "-L./binaryen/lib",
+    "-lbinaryen",
+    "-Clink-arg=-sALLOW_MEMORY_GROWTH=1",
+    "-Clink-arg=-mbulk-memory",
+    "-Clink-args=-sERROR_ON_UNDEFINED_SYMBOLS=0"
+]

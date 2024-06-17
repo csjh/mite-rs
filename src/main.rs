@@ -1,66 +1,11 @@
-use std::ffi::{c_char, c_void, CString};
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
 
-#[repr(C)]
-pub struct BinaryenLiteral {
-    pub type_: usize,
-    pub value: BinaryenLiteralValue,
-}
+use std::ffi::CString;
 
-#[repr(C)]
-pub union BinaryenLiteralValue {
-    pub i32: i32,
-    pub i64: i64,
-    pub f32: f32,
-    pub f64: f64,
-    pub v128: [u8; 16],
-    pub func: *const c_char,
-}
-
-type BinaryenModuleRef = *const c_void;
-type BinaryenType = *const c_void;
-type BinaryenExpressionRef = *const c_void;
-type BinaryenFunctionRef = *const c_void;
-type BinaryenIndex = u32;
-
-extern "C" {
-    fn BinaryenModuleCreate() -> BinaryenModuleRef;
-    fn BinaryenModuleDispose(module: BinaryenModuleRef);
-    fn BinaryenAddFunction(
-        module: BinaryenModuleRef,
-        name: *const c_char,
-        params: BinaryenType,
-        results: BinaryenType,
-        varTypes: *const BinaryenType,
-        numVarTypes: BinaryenIndex,
-        body: BinaryenExpressionRef,
-    ) -> BinaryenFunctionRef;
-    fn BinaryenAddFunctionExport(
-        module: BinaryenModuleRef,
-        internalName: *const c_char,
-        externalName: *const c_char,
-    );
-    fn BinaryenModuleValidate(module: BinaryenModuleRef) -> bool;
-    fn BinaryenModulePrint(module: BinaryenModuleRef);
-    fn BinaryenTypeInt32() -> BinaryenType;
-    fn BinaryenConst(module: BinaryenModuleRef, value: BinaryenLiteral) -> BinaryenExpressionRef;
-    fn BinaryenLiteralInt32(x: i32) -> BinaryenLiteral;
-
-    fn BinaryenModuleParse(text: *const c_char) -> BinaryenModuleRef;
-    fn BinaryenFunctionGetNumVars(func: BinaryenFunctionRef) -> BinaryenIndex;
-    fn BinaryenFunctionGetVar(func: BinaryenFunctionRef, index: BinaryenIndex) -> BinaryenType;
-    fn BinaryenFunctionGetName(func: BinaryenFunctionRef) -> *const c_char;
-    fn BinaryenFunctionGetParams(func: BinaryenFunctionRef) -> BinaryenType;
-    fn BinaryenFunctionGetResults(func: BinaryenFunctionRef) -> BinaryenType;
-    fn BinaryenFunctionGetBody(func: BinaryenFunctionRef) -> BinaryenExpressionRef;
-    fn BinaryenGetFunctionByIndex(
-        module: BinaryenModuleRef,
-        index: BinaryenIndex,
-    ) -> BinaryenFunctionRef;
-    fn BinaryenExpressionCopy(
-        expr: BinaryenExpressionRef,
-        module: BinaryenModuleRef,
-    ) -> BinaryenExpressionRef;
-}
+mod binaryen;
+use crate::binaryen::*;
 
 macro_rules! add_function {
     ($module:expr, { $($token:tt)* }) => {
@@ -79,7 +24,7 @@ macro_rules! add_function {
             BinaryenFunctionGetName(func),
             BinaryenFunctionGetParams(func),
             BinaryenFunctionGetResults(func),
-            local_types.as_ptr(),
+            local_types.as_ptr() as *mut usize,
             num_locals,
             BinaryenExpressionCopy(BinaryenFunctionGetBody(func), $module)
         );
