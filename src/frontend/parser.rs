@@ -50,10 +50,7 @@ enum TypeIdentifier {
     },
 }
 
-enum ProgramBody {
-    Statement(Statement),
-    ModuleDeclaration(Declaration),
-}
+type ProgramBody = Declaration;
 
 struct Program {
     body: Vec<ProgramBody>,
@@ -237,22 +234,105 @@ enum Expression {
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, index: 0 }
-    }
-
-    fn peek(&self) -> Option<&Token> {
-        self.tokens.get(self.index)
-    }
-
-    fn next(&mut self) -> Option<&Token> {
-        self.index += 1;
-        self.tokens.get(self.index - 1)
-    }
-
     fn parse(&mut self) -> Program {
         let mut body = Vec::new();
-
+        loop {
+            match self.peek() {
+                Token::EOF => break,
+                _ => {
+                    let result = self.parseTopLevelDeclaration();
+                    match result {
+                        Ok(res) => body.push(res),
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            break;
+                        }
+                    }
+                }
+            };
+        }
         Program { body }
+    }
+
+    fn parseTopLevelDeclaration(&mut self) -> Result<ProgramBody, String> {
+        let token = self.peek();
+        match token {
+            Token::Fn => self.parseFunction(),
+            Token::Struct => self.parseStruct(),
+            Token::Export => self.parseExport(),
+            Token::Import => self.parseImport(),
+            Token::Let | Token::Const => {
+                let decl = self.parseVariableDeclaration();
+                self.eatToken(Token::SemiColon);
+                decl
+            }
+            _ => Err(format!("unexpected token at top level: {:?}", token)),
+        }
+    }
+    fn parseImport(&mut self) -> Result<ProgramBody, String> {}
+    fn parseExport(&mut self) -> Result<ProgramBody, String> {}
+    fn parseStruct(&mut self) -> Result<ProgramBody, String> {}
+    fn parseFunction(&mut self) -> Result<ProgramBody, String> {}
+    fn parseVariableDeclaration(&mut self) -> Result<ProgramBody, String> {}
+
+    fn parseStatement(&mut self) -> Result<Statement, String> {}
+
+    fn parseExpression(&mut self) -> Result<Expression, String> {}
+    fn parseIfExpression(&mut self) -> Result<Expression, String> {}
+    fn parseForExpression(&mut self) -> Result<Expression, String> {}
+    fn parseDoWhileExpression(&mut self) -> Result<Expression, String> {}
+    fn parseWhileExpression(&mut self) -> Result<Expression, String> {}
+    fn parseSequenceExpression(&mut self) -> Result<Expression, String> {}
+    fn parseBlockExpression(&mut self) -> Result<Expression, String> {}
+    fn parseIdentifier(&mut self) -> Result<Expression, String> {}
+    fn parseNumberLiteral(&mut self) -> Result<Expression, String> {}
+    fn parseSIMDLiteral(&mut self) -> Result<Expression, String> {}
+    fn parseStringLiteral(&mut self) -> Result<Expression, String> {}
+    fn parseStructLiteral(&mut self) -> Result<Expression, String> {}
+    fn parseArrayLiteral(&mut self) -> Result<Expression, String> {}
+    fn parseCallExpression(&mut self) -> Result<Expression, String> {}
+    fn parseMemberExpression(&mut self) -> Result<Expression, String> {}
+    fn parseIndexExpression(&mut self) -> Result<Expression, String> {}
+    fn parseEmptyExpression(&mut self) -> Result<Expression, String> {}
+    fn parseContinueExpression(&mut self) -> Result<Expression, String> {}
+    fn parseBreakExpression(&mut self) -> Result<Expression, String> {}
+    fn parseUnaryExpression(&mut self) -> Result<Expression, String> {}
+
+    fn parseType(&mut self) -> Result<TypeIdentifier, String> {}
+
+    fn constructBinaryExpression(
+        &mut self,
+        left: Expression,
+        operator: Token,
+        right: Expression,
+    ) -> Result<Expression, String> {
+    }
+
+    fn expectToken(&mut self, token: Token) -> Result<(), String> {
+        if *self.peek() == token {
+            Ok(())
+        } else {
+            Err(format!("expected token {:?}, got {:?}", token, self.peek()))
+        }
+    }
+
+    fn eatToken(&mut self, token: Token) -> Result<(), String> {
+        self.expectToken(token)?;
+        self.next();
+        Ok(())
+    }
+
+    fn takeToken(&mut self, token: Token) -> Result<&Token, String> {
+        self.expectToken(token)?;
+        Ok(self.next())
+    }
+
+    fn peek(&self) -> &Token {
+        self.tokens.get(self.index).unwrap_or(&Token::EOF)
+    }
+
+    fn next(&mut self) -> &Token {
+        self.index += 1;
+        self.tokens.get(self.index - 1).unwrap_or(&Token::EOF)
     }
 }
