@@ -7,6 +7,8 @@ use std::ffi::CString;
 mod binaryen;
 use crate::binaryen::*;
 
+mod frontend;
+
 macro_rules! add_function {
     ($module:expr, { $($token:tt)* }) => {
         let module_str = CString::new(format!("(module {})", stringify!($($token)*))).unwrap();

@@ -1,4 +1,4 @@
-enum Token {
+pub(crate) enum Token {
     Identifier(String),
     Number(String),
     String(String),
