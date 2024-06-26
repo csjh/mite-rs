@@ -135,7 +135,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         }
                     }
                     Token::Number(num)
-                } else if char.is_alphabetic() {
+                } else if char.is_alphabetic() || char == '_' {
                     let mut identifier = char.to_string();
                     while let Some(char) = chars.peek() {
                         if char.is_alphanumeric() || *char == '_' {
