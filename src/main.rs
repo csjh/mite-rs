@@ -2,72 +2,30 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::ffi::CString;
-
-mod binaryen;
-use crate::binaryen::*;
-
 mod frontend;
 
-macro_rules! add_function {
-    ($module:expr, { $($token:tt)* }) => {
-        let module_str = CString::new(format!("(module {})", stringify!($($token)*))).unwrap();
-        let func_mod = BinaryenModuleParse(module_str.as_ptr());
-        let func = BinaryenGetFunctionByIndex(func_mod, 0);
-
-        let num_locals = BinaryenFunctionGetNumVars(func);
-        let mut local_types = vec![];
-        for i in 0..num_locals {
-            local_types.push(BinaryenFunctionGetVar(func, i));
-        }
-
-        BinaryenAddFunction(
-            $module,
-            BinaryenFunctionGetName(func),
-            BinaryenFunctionGetParams(func),
-            BinaryenFunctionGetResults(func),
-            local_types.as_ptr() as *mut usize,
-            num_locals,
-            BinaryenExpressionCopy(BinaryenFunctionGetBody(func), $module)
-        );
-
-        BinaryenModuleDispose(func_mod);
-    };
-}
-
 #[no_mangle]
-pub extern "C" fn binaryen_test() {
-    unsafe {
-        let module = BinaryenModuleCreate();
-        println!("module = {}", module as u32);
+pub extern "C" fn compile(input: *const u8, input_len: usize) {
+    let input = unsafe { std::slice::from_raw_parts(input, input_len) };
+    let input = std::str::from_utf8(input).unwrap();
+    println!("Compiling input: {}", input);
 
-        add_function!(module, {
-            (func $bar (param $0 i32) (result i32)
-                (i32.const 72)
-            )
-        });
+    let tokens = frontend::tokenizer::tokenize(input);
+    println!("{:?}", tokens);
 
-        let func = CString::new("foo").expect("fubar");
-
-        BinaryenAddFunction(
-            module,
-            func.as_ptr(),
-            BinaryenTypeInt32(),
-            BinaryenTypeInt32(),
-            std::ptr::null_mut(),
-            0,
-            BinaryenConst(module, BinaryenLiteralInt32(43)),
-        );
-        BinaryenAddFunctionExport(module, func.as_ptr(), func.as_ptr());
-        if BinaryenModuleValidate(module) {
-            println!("validation ok");
-        } else {
-            println!("validation error");
-            panic!();
-        }
-        BinaryenModulePrint(module);
-        BinaryenModuleDispose(module);
-    }
+    let ast = frontend::parser::parse(tokens);
+    println!("{:?}", ast);
 }
 
-fn main() {}
+fn main() {
+    let input = "
+    fn main(): i32 {
+        let x: i32 = 42;
+        let y: i32 = 43;
+        let z = x + y;
+        return z;
+    }
+    ";
+
+    compile(input.as_ptr(), input.len());
+}
