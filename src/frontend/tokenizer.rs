@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Token {
     Identifier(String),
     Number(String),
@@ -73,13 +73,10 @@ pub(crate) enum Token {
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = vec![];
 
-    let mut chars = input
-        .chars()
-        .filter(|c: &char| !c.is_whitespace())
-        .peekable();
+    let mut chars = input.chars().peekable();
 
     // tokenize the input
-    while let Some(char) = chars.next() {
+    while let Some(char) = chars.find(|c| !c.is_whitespace()) {
         let token = match char {
             '(' => Token::LeftParen,
             ')' => Token::RightParen,
@@ -96,7 +93,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '-' => Token::Minus,
             '/' => Token::Slash,
             '*' => Token::Star,
-            '=' => Token::Equals,
+            '=' => Token::Assignment,
             '!' => Token::Not,
             '<' => Token::LessThan,
             '>' => Token::GreaterThan,
@@ -132,7 +129,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         };
 
         // check for 2-character tokens
-        let peeked = *chars.peek().get_or_insert(&'\0');
+        let peeked = chars.peek().unwrap_or(&'\0');
         let token = match token {
             Token::Identifier(ref idtfr) => match idtfr.as_str() {
                 "let" => Token::Let,
@@ -257,7 +254,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         };
 
         // check for 3-character tokens
-        let peeked = *chars.peek().get_or_insert(&'\0');
+        let peeked = chars.peek().unwrap_or(&'\0');
         let token = match token {
             Token::BitshiftRight => match peeked {
                 '=' => {
