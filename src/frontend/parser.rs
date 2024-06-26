@@ -536,7 +536,7 @@ impl Parser {
                 Token::LeftBracket => expression_stack.push(self.parseArrayLiteral()?),
                 Token::If => expression_stack.push(self.parseIfExpression()?),
                 Token::LeftBrace => {
-                    if let Token::Number(_) = *self.getToken(self.index + 1) {
+                    if matches!(self.getToken(self.index + 1), Token::Number(_)) {
                         expression_stack.push(self.parseSIMDLiteral()?);
                     } else {
                         expression_stack.push(self.parseBlockExpression()?);
@@ -554,7 +554,7 @@ impl Parser {
                 }
                 Token::Identifier(_) => {
                     let next = self.parseIdentifier()?;
-                    if *self.getToken(self.index + 1) == Token::LeftBrace {
+                    if matches!(self.getToken(self.index + 1), Token::LeftBrace) {
                         expression_stack.push(self.parseStructLiteral(next)?);
                     } else {
                         expression_stack.push(Expression::Identifier(next));
@@ -625,6 +625,8 @@ impl Parser {
                 }
             }
         }
+
+        assert!(expression_stack.len() == operator_stack.len() + 1);
 
         for (j, precedence_level) in precedence.iter().enumerate() {
             let RIGHT_TO_LEFT = j == precedence.len() - 1;
