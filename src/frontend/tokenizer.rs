@@ -101,6 +101,29 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '^' => Token::BitwiseXor,
             '&' => Token::BitwiseAnd,
 
+            '"' => {
+                let mut string = String::new();
+                while let Some(char) = chars.next() {
+                    if char == '\\' {
+                        match chars.next() {
+                            Some('n') => string.push('\n'),
+                            Some('r') => string.push('\r'),
+                            Some('t') => string.push('\t'),
+                            Some('\\') => string.push('\\'),
+                            Some('"') => string.push('"'),
+                            Some('0') => string.push('\0'),
+                            Some(_) => panic!("unexpected escape character"),
+                            None => panic!("unexpected end of input"),
+                        }
+                    } else if char == '"' {
+                        break;
+                    } else {
+                        string.push(char);
+                    }
+                }
+                Token::String(string)
+            }
+
             _ => {
                 if char.is_digit(10) {
                     let mut num = char.to_string();
