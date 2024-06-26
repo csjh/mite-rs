@@ -1,6 +1,15 @@
 extern crate bindgen;
 
 fn main() {
+    // add link-arg if in dev mode
+    let profile = std::env::var("PROFILE").unwrap();
+    match profile.as_str() {
+        "debug" => {
+            println!("cargo:rustc-link-arg=-sERROR_ON_WASM_CHANGES_AFTER_LINK");
+        }
+        _ => {}
+    }
+
     #[cfg(feature = "bindings")]
     {
         bindgen::Builder::default()

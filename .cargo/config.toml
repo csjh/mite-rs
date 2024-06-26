@@ -3,11 +3,9 @@ target = "wasm32-unknown-emscripten"
 rustflags = [
     "-L./binaryen/lib",
     "-lbinaryen",
-#    "-Ctarget-feature=+bulk-memory",
-#    "-Clink-arg=-sALLOW_MEMORY_GROWTH=1",
-#    "-Clink-arg=-mbulk-memory",
-#    "-Clink-args=-sERROR_ON_UNDEFINED_SYMBOLS=0",
-#    "-Clink-args=-sWASM_BIGINT",
-#    "-Clink-args=-sERROR_ON_WASM_CHANGES_AFTER_LINK",
-#    "-Clink-args=-O1",
+    "-Ctarget-feature=+bulk-memory,+nontrapping-fptoint,+simd128",
+    "-Clink-arg=-sALLOW_MEMORY_GROWTH=1",
+    "-Zlink-native-libraries=false",
+    "-Clink-args=-sWASM_BIGINT",
 ]
+
