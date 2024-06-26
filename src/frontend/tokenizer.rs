@@ -153,8 +153,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
         // check for 2-character tokens
         let peeked = chars.peek().unwrap_or(&'\0');
-        let token = match token {
-            Token::Identifier(ref idtfr) => match idtfr.as_str() {
+        let token = match (&token, peeked) {
+            (Token::Identifier(ref idtfr), _) => match idtfr.as_str() {
                 "let" => Token::Let,
                 "const" => Token::Const,
                 "fn" => Token::Fn,
@@ -173,119 +173,84 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 "from" => Token::From,
                 _ => token,
             },
-            Token::Plus => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentPlus
-                }
-                _ => token,
-            },
-            Token::Minus => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentMinus
-                }
-                _ => token,
-            },
-            Token::Slash => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentSlash
-                }
-                _ => token,
-            },
-            Token::Star => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentStar
-                }
-                _ => token,
-            },
-            Token::Remainder => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentRemainder
-                }
-                _ => token,
-            },
-            Token::BitwiseOr => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentBitwiseOr
-                }
-                '|' => {
-                    chars.next();
-                    Token::LogicalOr
-                }
-                _ => token,
-            },
-            Token::BitwiseXor => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentBitwiseXor
-                }
-                _ => token,
-            },
-            Token::BitwiseAnd => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentBitwiseAnd
-                }
-                '&' => {
-                    chars.next();
-                    Token::LogicalAnd
-                }
-                _ => token,
-            },
-            Token::Assignment => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::Equals
-                }
-                _ => token,
-            },
-            Token::LessThan => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::LessThanEquals
-                }
-                '<' => {
-                    chars.next();
-                    Token::BitshiftLeft
-                }
-                _ => token,
-            },
-            Token::GreaterThan => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::GreaterThanEquals
-                }
-                '>' => {
-                    chars.next();
-                    Token::BitshiftRight
-                }
-                _ => token,
-            },
-            Token::Not => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::NotEquals
-                }
-                _ => token,
-            },
+            (Token::Plus, '=') => {
+                chars.next();
+                Token::AssignmentPlus
+            }
+            (Token::Minus, '=') => {
+                chars.next();
+                Token::AssignmentMinus
+            }
+            (Token::Slash, '=') => {
+                chars.next();
+                Token::AssignmentSlash
+            }
+            (Token::Star, '=') => {
+                chars.next();
+                Token::AssignmentStar
+            }
+            (Token::Remainder, '=') => {
+                chars.next();
+                Token::AssignmentRemainder
+            }
+            (Token::BitwiseOr, '=') => {
+                chars.next();
+                Token::AssignmentBitwiseOr
+            }
+            (Token::BitwiseOr, '|') => {
+                chars.next();
+                Token::LogicalOr
+            }
+            (Token::BitwiseXor, '=') => {
+                chars.next();
+                Token::AssignmentBitwiseXor
+            }
+            (Token::BitwiseAnd, '=') => {
+                chars.next();
+                Token::AssignmentBitwiseAnd
+            }
+            (Token::BitwiseAnd, '&') => {
+                chars.next();
+                Token::LogicalAnd
+            }
+            (Token::Assignment, '=') => {
+                chars.next();
+                Token::Equals
+            }
+            (Token::LessThan, '=') => {
+                chars.next();
+                Token::LessThanEquals
+            }
+            (Token::LessThan, '<') => {
+                chars.next();
+                Token::BitshiftLeft
+            }
+            (Token::GreaterThan, '=') => {
+                chars.next();
+                Token::GreaterThanEquals
+            }
+            (Token::GreaterThan, '>') => {
+                chars.next();
+                Token::BitshiftRight
+            }
+            (Token::Not, '=') => {
+                chars.next();
+                Token::NotEquals
+            }
             _ => token,
         };
 
         // check for 3-character tokens
         let peeked = chars.peek().unwrap_or(&'\0');
-        let token = match token {
-            Token::BitshiftRight => match peeked {
-                '=' => {
-                    chars.next();
-                    Token::AssignmentBitshiftRight
-                }
-                _ => token,
-            },
+        let token = match (&token, peeked) {
+            (Token::BitshiftRight, '=') => {
+                chars.next();
+                Token::AssignmentBitshiftRight
+            }
+            (Token::BitshiftLeft, '=') => {
+                chars.next();
+                Token::AssignmentBitshiftLeft
+            }
             _ => token,
         };
 
