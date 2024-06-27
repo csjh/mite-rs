@@ -32,15 +32,15 @@ const PRECEDENCE: [&'static [Token]; 11] = [
     ],
 ];
 
-pub struct Parser {
+pub(crate) struct Parser {
     tokens: Vec<Token>,
     index: usize,
 }
 
-type Identifier = String;
+pub(crate) type Identifier = String;
 
 #[derive(Clone, PartialEq, Debug)]
-enum TypeIdentifier {
+pub(crate) enum TypeIdentifier {
     Identifier {
         is_ref: bool,
         name: String,
@@ -57,7 +57,7 @@ enum TypeIdentifier {
     },
 }
 
-type ProgramBody = Declaration;
+pub(crate) type ProgramBody = Declaration;
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Program {
@@ -154,20 +154,20 @@ pub(crate) enum Declaration {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum Statement {
+pub(crate) enum Statement {
     ExpressionStatement { expression: Expression },
     ReturnStatement { argument: Option<Expression> },
     Declaration(Declaration),
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum ForExpressionInit {
+pub(crate) enum ForExpressionInit {
     VariableDeclaration(Declaration),
     Expression(Expression),
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum Expression {
+pub(crate) enum Expression {
     Identifier(Identifier),
     Literal(Literal),
     BlockExpression {
