@@ -1,7 +1,7 @@
 use crate::frontend::tokenizer::Token;
 
-const unary_operators: [Token; 4] = [Token::Not, Token::BitwiseNot, Token::Plus, Token::Minus];
-const precedence: [&'static [Token]; 11] = [
+const UNARY_OPERATORS: [Token; 4] = [Token::Not, Token::BitwiseNot, Token::Plus, Token::Minus];
+const PRECEDENCE: [&'static [Token]; 11] = [
     &[Token::Star, Token::Slash, Token::Remainder],
     &[Token::Plus, Token::Minus],
     &[Token::BitshiftLeft, Token::BitshiftRight],
@@ -65,13 +65,13 @@ pub(crate) struct Program {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct TypedParameter {
+pub(crate) struct TypedParameter {
     name: Identifier,
-    typeAnnotation: TypeIdentifier,
+    type_annotation: TypeIdentifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct FunctionDeclaration {
+pub(crate) struct FunctionDeclaration {
     name: Identifier,
     parameters: Vec<TypedParameter>,
     return_type: TypeIdentifier,
@@ -79,61 +79,61 @@ struct FunctionDeclaration {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Property {
+pub(crate) struct Property {
     key: Identifier,
     value: Expression,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct VariableDeclarator {
+pub(crate) struct VariableDeclarator {
     id: Identifier,
     init: Option<Expression>,
-    typeAnnotation: Option<TypeIdentifier>,
+    type_annotation: Option<TypeIdentifier>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum Literal {
-    string(String),
+pub(crate) enum Literal {
+    String(String),
     // f32(f32),
-    f64(f64),
-    i32(i32),
-    u32(u32),
-    i64(i64),
-    u64(u64),
+    F64(f64),
+    I32(i32),
+    U32(u32),
+    I64(i64),
+    U64(u64),
     // bool(bool),
-    f64x2([f64; 2]),
-    f32x4([f32; 4]),
-    i8x16([i8; 16]),
-    u8x16([u8; 16]),
-    i16x8([i16; 8]),
-    u16x8([u16; 8]),
-    i32x4([i32; 4]),
-    u32x4([u32; 4]),
-    i64x2([i64; 2]),
-    u64x2([u64; 2]),
+    F64x2([f64; 2]),
+    F32x4([f32; 4]),
+    I8x16([i8; 16]),
+    U8x16([u8; 16]),
+    I16x8([i16; 8]),
+    U16x8([u16; 8]),
+    I32x4([i32; 4]),
+    U32x4([u32; 4]),
+    I64x2([i64; 2]),
+    U64x2([u64; 2]),
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct StructField {
+pub(crate) struct StructField {
     name: Identifier,
-    typeAnnotation: TypeIdentifier,
+    type_annotation: TypeIdentifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct ImportSpecifier {
+pub(crate) struct ImportSpecifier {
     local: Identifier,
     imported: Identifier,
-    typeAnnotation: Option<TypeIdentifier>,
+    type_annotation: Option<TypeIdentifier>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum VariableKind {
+pub(crate) enum VariableKind {
     Let,
     Const,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum Declaration {
+pub(crate) enum Declaration {
     FunctionDeclaration(FunctionDeclaration),
     VariableDeclaration {
         declarations: Vec<VariableDeclarator>,
@@ -194,7 +194,7 @@ enum Expression {
         elements: Vec<Expression>,
     },
     ObjectExpression {
-        typeAnnotation: TypeIdentifier,
+        type_annotation: TypeIdentifier,
         properties: Vec<Property>,
     },
     SequenceExpression {
@@ -254,7 +254,7 @@ impl Parser {
             match self.peek() {
                 Token::EOF => break,
                 _ => {
-                    let result = self.parseTopLevelDeclaration();
+                    let result = self.parse_top_level_declaration();
                     match result {
                         Ok(res) => body.push(res),
                         Err(err) => {
@@ -271,36 +271,36 @@ impl Parser {
             };
         }
 
-        self.expectToken(Token::EOF).unwrap();
+        self.expect_token(Token::EOF).unwrap();
 
         Program { body }
     }
 
-    fn parseTopLevelDeclaration(&mut self) -> Result<ProgramBody, String> {
+    fn parse_top_level_declaration(&mut self) -> Result<ProgramBody, String> {
         match self.peek() {
-            Token::Fn => Ok(Declaration::FunctionDeclaration(self.parseFunction(false)?)),
-            Token::Struct => self.parseStruct(),
-            Token::Export => self.parseExport(),
-            Token::Import => self.parseImport(),
+            Token::Fn => Ok(Declaration::FunctionDeclaration(self.parse_function(false)?)),
+            Token::Struct => self.parse_struct(),
+            Token::Export => self.parse_export(),
+            Token::Import => self.parse_import(),
             Token::Let | Token::Const => {
-                let decl = self.parseVariableDeclaration();
-                self.eatToken(Token::SemiColon)?;
+                let decl = self.parse_variable_declaration();
+                self.eat_token(Token::SemiColon)?;
                 decl
             }
             token => Err(format!("unexpected token at top level: {:?}", token)),
         }
     }
-    fn parseImport(&mut self) -> Result<ProgramBody, String> {
-        self.eatToken(Token::Import)?;
-        self.eatToken(Token::LeftBrace)?;
+    fn parse_import(&mut self) -> Result<ProgramBody, String> {
+        self.eat_token(Token::Import)?;
+        self.eat_token(Token::LeftBrace)?;
 
         let mut specifiers = Vec::new();
         loop {
-            let imported = self.parseIdentifier()?;
+            let imported = self.parse_identifier()?;
 
             let local = if matches!(self.peek(), Token::As) {
-                self.eatToken(Token::As)?;
-                self.parseIdentifier()?
+                self.eat_token(Token::As)?;
+                self.parse_identifier()?
             } else {
                 imported.clone()
             };
@@ -308,9 +308,9 @@ impl Parser {
             let specifier = ImportSpecifier {
                 local,
                 imported,
-                typeAnnotation: if matches!(self.peek(), Token::Colon) {
-                    self.eatToken(Token::Colon)?;
-                    Some(self.parseType()?)
+                type_annotation: if matches!(self.peek(), Token::Colon) {
+                    self.eat_token(Token::Colon)?;
+                    Some(self.parse_type()?)
                 } else {
                     None
                 },
@@ -322,22 +322,22 @@ impl Parser {
                 break;
             }
 
-            self.eatToken(Token::Comma)?;
+            self.eat_token(Token::Comma)?;
         }
 
-        self.eatToken(Token::RightBrace)?;
-        self.eatToken(Token::From)?;
+        self.eat_token(Token::RightBrace)?;
+        self.eat_token(Token::From)?;
 
-        let source = self.parseStringLiteral()?;
+        let source = self.parse_string_literal()?;
 
-        self.eatToken(Token::SemiColon)?;
+        self.eat_token(Token::SemiColon)?;
 
         Ok(ProgramBody::ImportDeclaration { source, specifiers })
     }
-    fn parseExport(&mut self) -> Result<ProgramBody, String> {
-        self.eatToken(Token::EOF)?;
+    fn parse_export(&mut self) -> Result<ProgramBody, String> {
+        self.eat_token(Token::EOF)?;
 
-        match self.parseTopLevelDeclaration()? {
+        match self.parse_top_level_declaration()? {
             ProgramBody::ExportNamedDeclaration { .. } | ProgramBody::ImportDeclaration { .. } => {
                 Err("export/import cannot be nested".to_string())
             }
@@ -346,12 +346,12 @@ impl Parser {
             }),
         }
     }
-    fn parseStruct(&mut self) -> Result<ProgramBody, String> {
-        self.eatToken(Token::Struct)?;
+    fn parse_struct(&mut self) -> Result<ProgramBody, String> {
+        self.eat_token(Token::Struct)?;
 
-        let id = self.parseIdentifier()?;
+        let id = self.parse_identifier()?;
 
-        self.eatToken(Token::LeftBrace)?;
+        self.eat_token(Token::LeftBrace)?;
 
         let mut fields = Vec::new();
         let mut methods = Vec::new();
@@ -359,24 +359,24 @@ impl Parser {
         loop {
             match self.peek() {
                 Token::RightBrace => break,
-                Token::Identifier(_) => match self.getToken(self.index + 1) {
+                Token::Identifier(_) => match self.get_token(self.index + 1) {
                     Token::Colon => {
-                        let name = self.parseIdentifier()?;
-                        self.eatToken(Token::Colon)?;
-                        let typeAnnotation = self.parseType()?;
+                        let name = self.parse_identifier()?;
+                        self.eat_token(Token::Colon)?;
+                        let type_annotation = self.parse_type()?;
 
                         fields.push(StructField {
                             name,
-                            typeAnnotation,
+                            type_annotation,
                         });
                     }
                     Token::LeftParen => {
-                        let mut func = self.parseFunction(true)?;
+                        let mut func = self.parse_function(true)?;
                         func.parameters.insert(
                             0,
                             TypedParameter {
                                 name: "this".to_string(),
-                                typeAnnotation: TypeIdentifier::Identifier {
+                                type_annotation: TypeIdentifier::Identifier {
                                     is_ref: true,
                                     name: id.clone(),
                                 },
@@ -390,7 +390,7 @@ impl Parser {
             }
         }
 
-        self.eatToken(Token::RightBrace)?;
+        self.eat_token(Token::RightBrace)?;
 
         Ok(ProgramBody::StructDeclaration {
             id,
@@ -398,40 +398,40 @@ impl Parser {
             methods,
         })
     }
-    fn parseFunction(&mut self, is_method: bool) -> Result<FunctionDeclaration, String> {
+    fn parse_function(&mut self, is_method: bool) -> Result<FunctionDeclaration, String> {
         if !is_method {
-            self.eatToken(Token::Fn)?;
+            self.eat_token(Token::Fn)?;
         }
 
-        let name = self.parseIdentifier()?;
+        let name = self.parse_identifier()?;
 
-        self.eatToken(Token::LeftParen)?;
+        self.eat_token(Token::LeftParen)?;
 
         let mut parameters = Vec::new();
         loop {
             match self.peek() {
                 Token::RightParen => break,
                 Token::Comma => {
-                    self.eatToken(Token::Comma)?;
+                    self.eat_token(Token::Comma)?;
                 }
                 _ => {
-                    let name = self.parseIdentifier()?;
-                    self.eatToken(Token::Colon)?;
-                    let typeAnnotation = self.parseType()?;
+                    let name = self.parse_identifier()?;
+                    self.eat_token(Token::Colon)?;
+                    let type_annotation = self.parse_type()?;
 
                     parameters.push(TypedParameter {
                         name,
-                        typeAnnotation,
+                        type_annotation,
                     });
                 }
             }
         }
 
-        self.eatToken(Token::RightParen)?;
-        self.eatToken(Token::Colon)?;
+        self.eat_token(Token::RightParen)?;
+        self.eat_token(Token::Colon)?;
 
-        let return_type = self.parseType()?;
-        let body = self.parseBlockExpression()?;
+        let return_type = self.parse_type()?;
+        let body = self.parse_block_expression()?;
 
         Ok(FunctionDeclaration {
             name,
@@ -440,7 +440,7 @@ impl Parser {
             body,
         })
     }
-    fn parseVariableDeclaration(&mut self) -> Result<ProgramBody, String> {
+    fn parse_variable_declaration(&mut self) -> Result<ProgramBody, String> {
         let kind = match self.peek() {
             Token::Let => VariableKind::Let,
             Token::Const => VariableKind::Const,
@@ -452,38 +452,38 @@ impl Parser {
             }
         };
 
-        self.eatToken(self.peek().clone())?;
+        self.eat_token(self.peek().clone())?;
 
         let mut declarations = Vec::new();
         loop {
-            let id = self.parseIdentifier()?;
+            let id = self.parse_identifier()?;
 
-            let typeAnnotation = if matches!(self.peek(), Token::Colon) {
-                self.eatToken(Token::Colon)?;
-                Some(self.parseType()?)
+            let type_annotation = if matches!(self.peek(), Token::Colon) {
+                self.eat_token(Token::Colon)?;
+                Some(self.parse_type()?)
             } else {
                 None
             };
 
             let init = if matches!(self.peek(), Token::Assignment) {
-                self.eatToken(Token::Assignment)?;
-                Some(self.parseExpression()?)
+                self.eat_token(Token::Assignment)?;
+                Some(self.parse_expression()?)
             } else {
                 None
             };
 
-            if init.is_none() && typeAnnotation.is_none() {
+            if init.is_none() && type_annotation.is_none() {
                 return Err("variable declaration must have a type or an initializer".to_string());
             }
 
             declarations.push(VariableDeclarator {
                 id,
                 init,
-                typeAnnotation,
+                type_annotation,
             });
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
@@ -492,76 +492,76 @@ impl Parser {
         Ok(ProgramBody::VariableDeclaration { declarations, kind })
     }
 
-    fn parseStatement(&mut self) -> Result<Statement, String> {
+    fn parse_statement(&mut self) -> Result<Statement, String> {
         let statement;
 
         match self.peek() {
             Token::Return => {
-                self.eatToken(Token::Return)?;
+                self.eat_token(Token::Return)?;
                 statement = Statement::ReturnStatement {
-                    argument: Some(self.parseExpression()?),
+                    argument: Some(self.parse_expression()?),
                 };
             }
             Token::Let | Token::Const => {
-                statement = Statement::Declaration(self.parseVariableDeclaration()?);
+                statement = Statement::Declaration(self.parse_variable_declaration()?);
             }
             _ => {
                 statement = Statement::ExpressionStatement {
-                    expression: self.parseExpression()?,
+                    expression: self.parse_expression()?,
                 };
             }
         }
 
-        self.eatToken(Token::SemiColon)?;
+        self.eat_token(Token::SemiColon)?;
 
         Ok(statement)
     }
 
-    fn parseExpression(&mut self) -> Result<Expression, String> {
+    fn parse_expression(&mut self) -> Result<Expression, String> {
         let mut expression_stack = Vec::new();
         let mut operator_stack = Vec::new();
 
         if matches!(self.peek(), Token::Return | Token::Let | Token::Const) {
             self.index -= 1;
             return Ok(Expression::BlockExpression {
-                body: vec![self.parseStatement()?],
+                body: vec![self.parse_statement()?],
             });
         }
 
         loop {
             match self.peek() {
                 Token::SemiColon | Token::RightParen => {
-                    expression_stack.push(self.parseEmptyExpression()?)
+                    expression_stack.push(self.parse_empty_expression()?)
                 }
-                Token::LeftBracket => expression_stack.push(self.parseArrayLiteral()?),
-                Token::If => expression_stack.push(self.parseIfExpression()?),
+                Token::LeftBracket => expression_stack.push(self.parse_array_literal()?),
+                Token::If => expression_stack.push(self.parse_if_expression()?),
                 Token::LeftBrace => {
-                    if matches!(self.getToken(self.index + 1), Token::Number(_)) {
-                        expression_stack.push(self.parseSIMDLiteral()?);
+                    if matches!(self.get_token(self.index + 1), Token::Number(_)) {
+                        expression_stack.push(self.parse_simd_literal()?);
                     } else {
-                        expression_stack.push(self.parseBlockExpression()?);
+                        expression_stack.push(self.parse_block_expression()?);
                     }
                 }
-                Token::LeftParen => expression_stack.push(self.parseSequenceExpression()?),
-                Token::For => expression_stack.push(self.parseForExpression()?),
-                Token::Do => expression_stack.push(self.parseDoWhileExpression()?),
-                Token::While => expression_stack.push(self.parseWhileExpression()?),
-                Token::Continue => expression_stack.push(self.parseContinueExpression()?),
-                Token::Break => expression_stack.push(self.parseBreakExpression()?),
-                Token::Number(_) => expression_stack.push(self.parseNumberLiteral()?),
+                Token::LeftParen => expression_stack.push(self.parse_sequence_expression()?),
+                Token::For => expression_stack.push(self.parse_for_expression()?),
+                Token::Do => expression_stack.push(self.parse_do_while_expression()?),
+                Token::While => expression_stack.push(self.parse_while_expression()?),
+                Token::Continue => expression_stack.push(self.parse_continue_expression()?),
+                Token::Break => expression_stack.push(self.parse_break_expression()?),
+                Token::Number(_) => expression_stack.push(self.parse_number_literal()?),
                 Token::String(_) => {
-                    expression_stack.push(Expression::Literal(self.parseStringLiteral()?))
+                    expression_stack.push(Expression::Literal(self.parse_string_literal()?))
                 }
                 Token::Identifier(_) => {
-                    let next = self.parseIdentifier()?;
-                    if matches!(self.getToken(self.index + 1), Token::LeftBrace) {
-                        expression_stack.push(self.parseStructLiteral(next)?);
+                    let next = self.parse_identifier()?;
+                    if matches!(self.get_token(self.index + 1), Token::LeftBrace) {
+                        expression_stack.push(self.parse_struct_literal(next)?);
                     } else {
                         expression_stack.push(Expression::Identifier(next));
                     }
                 }
                 Token::Not | Token::BitwiseNot | Token::Plus | Token::Minus => {
-                    expression_stack.push(self.parseUnaryExpression()?);
+                    expression_stack.push(self.parse_unary_expression()?);
                 }
                 _ => (),
             }
@@ -569,9 +569,9 @@ impl Parser {
             loop {
                 let last = expression_stack.pop().unwrap();
                 match self.peek() {
-                    Token::LeftBracket => expression_stack.push(self.parseIndexExpression(last)?),
-                    Token::Period => expression_stack.push(self.parseMemberExpression(last)?),
-                    Token::LeftParen => expression_stack.push(self.parseCallExpression(last)?),
+                    Token::LeftBracket => expression_stack.push(self.parse_index_expression(last)?),
+                    Token::Period => expression_stack.push(self.parse_member_expression(last)?),
+                    Token::LeftParen => expression_stack.push(self.parse_call_expression(last)?),
                     _ => {
                         expression_stack.push(last);
                         break;
@@ -628,8 +628,8 @@ impl Parser {
 
         assert!(expression_stack.len() == operator_stack.len() + 1);
 
-        for (j, precedence_level) in precedence.iter().enumerate() {
-            let RIGHT_TO_LEFT = j == precedence.len() - 1;
+        for (j, precedence_level) in PRECEDENCE.iter().enumerate() {
+            let right_to_left = j == PRECEDENCE.len() - 1;
 
             let mut new_expression_stack = Vec::new();
             // probably not needed
@@ -638,7 +638,7 @@ impl Parser {
             // }
             let mut new_operator_stack = Vec::new();
 
-            if !RIGHT_TO_LEFT {
+            if !right_to_left {
                 new_expression_stack.push(expression_stack.first().unwrap().clone());
                 for i in 0..operator_stack.len() {
                     let operator = operator_stack[i].clone();
@@ -647,7 +647,7 @@ impl Parser {
 
                     if precedence_level.contains(&operator) {
                         let new_expression =
-                            self.constructBinaryExpression(left, operator.clone(), right)?;
+                            self.construct_binary_expression(left, operator.clone(), right)?;
 
                         new_expression_stack.push(new_expression);
                     } else {
@@ -665,7 +665,7 @@ impl Parser {
 
                     if precedence_level.contains(&operator) {
                         let new_expression =
-                            self.constructBinaryExpression(left, operator.clone(), right)?;
+                            self.construct_binary_expression(left, operator.clone(), right)?;
 
                         new_expression_stack.push(new_expression);
                     } else {
@@ -689,19 +689,19 @@ impl Parser {
             expression_stack
         ))
     }
-    fn parseIfExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::If)?;
-        self.eatToken(Token::LeftParen)?;
+    fn parse_if_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::If)?;
+        self.eat_token(Token::LeftParen)?;
 
-        let test = self.parseExpression()?;
+        let test = self.parse_expression()?;
 
-        self.eatToken(Token::RightParen)?;
+        self.eat_token(Token::RightParen)?;
 
-        let consequent = self.parseExpression()?;
+        let consequent = self.parse_expression()?;
 
         let alternate = if matches!(self.peek(), Token::Else) {
-            self.eatToken(Token::Else)?;
-            Some(Box::new(self.parseExpression()?))
+            self.eat_token(Token::Else)?;
+            Some(Box::new(self.parse_expression()?))
         } else {
             None
         };
@@ -712,39 +712,39 @@ impl Parser {
             alternate,
         })
     }
-    fn parseForExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::For)?;
-        self.eatToken(Token::LeftParen)?;
+    fn parse_for_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::For)?;
+        self.eat_token(Token::LeftParen)?;
 
         let init = if matches!(self.peek(), Token::SemiColon) {
             None
         } else if matches!(self.peek(), Token::Let | Token::Const) {
-            let decl = self.parseVariableDeclaration()?;
+            let decl = self.parse_variable_declaration()?;
             Some(Box::new(ForExpressionInit::VariableDeclaration(decl)))
         } else {
-            let expr = self.parseExpression()?;
+            let expr = self.parse_expression()?;
             Some(Box::new(ForExpressionInit::Expression(expr)))
         };
 
-        self.eatToken(Token::SemiColon)?;
+        self.eat_token(Token::SemiColon)?;
 
         let test = if matches!(self.peek(), Token::SemiColon) {
             None
         } else {
-            Some(Box::new(self.parseExpression()?))
+            Some(Box::new(self.parse_expression()?))
         };
 
-        self.eatToken(Token::SemiColon)?;
+        self.eat_token(Token::SemiColon)?;
 
         let update = if matches!(self.peek(), Token::RightParen) {
             None
         } else {
-            Some(Box::new(self.parseExpression()?))
+            Some(Box::new(self.parse_expression()?))
         };
 
-        self.eatToken(Token::RightParen)?;
+        self.eat_token(Token::RightParen)?;
 
-        let body = Box::new(self.parseExpression()?);
+        let body = Box::new(self.parse_expression()?);
 
         Ok(Expression::ForExpression {
             init,
@@ -753,83 +753,83 @@ impl Parser {
             body,
         })
     }
-    fn parseDoWhileExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::Do)?;
+    fn parse_do_while_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::Do)?;
 
-        let body = Box::new(self.parseExpression()?);
+        let body = Box::new(self.parse_expression()?);
 
-        self.eatToken(Token::While)?;
-        self.eatToken(Token::LeftParen)?;
+        self.eat_token(Token::While)?;
+        self.eat_token(Token::LeftParen)?;
 
-        let test = Box::new(self.parseExpression()?);
+        let test = Box::new(self.parse_expression()?);
 
-        self.eatToken(Token::RightParen)?;
+        self.eat_token(Token::RightParen)?;
 
         Ok(Expression::DoWhileExpression { test, body })
     }
-    fn parseWhileExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::While)?;
-        self.eatToken(Token::LeftParen)?;
+    fn parse_while_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::While)?;
+        self.eat_token(Token::LeftParen)?;
 
-        let test = Box::new(self.parseExpression()?);
+        let test = Box::new(self.parse_expression()?);
 
-        self.eatToken(Token::RightParen)?;
+        self.eat_token(Token::RightParen)?;
 
-        let body = Box::new(self.parseExpression()?);
+        let body = Box::new(self.parse_expression()?);
 
         Ok(Expression::WhileExpression { test, body })
     }
-    fn parseSequenceExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::LeftBrace)?;
+    fn parse_sequence_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::LeftBrace)?;
 
         let mut expressions = Vec::new();
         loop {
-            expressions.push(self.parseExpression()?);
+            expressions.push(self.parse_expression()?);
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        self.eatToken(Token::RightBrace)?;
+        self.eat_token(Token::RightBrace)?;
 
         Ok(Expression::SequenceExpression { expressions })
     }
-    fn parseBlockExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::LeftBrace)?;
+    fn parse_block_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::LeftBrace)?;
 
         let mut body = Vec::new();
         loop {
             match self.peek() {
                 Token::RightBrace => break,
-                _ => body.push(self.parseStatement()?),
+                _ => body.push(self.parse_statement()?),
             }
         }
 
-        self.eatToken(Token::RightBrace)?;
+        self.eat_token(Token::RightBrace)?;
 
         Ok(Expression::BlockExpression { body })
     }
-    fn parseIdentifier(&mut self) -> Result<String, String> {
+    fn parse_identifier(&mut self) -> Result<String, String> {
         match self.next() {
             Token::Identifier(name) => Ok(name.to_string()),
             token => Err(format!("expected identifier, got {:?}", token)),
         }
     }
-    fn parseNumberLiteral(&mut self) -> Result<Expression, String> {
+    fn parse_number_literal(&mut self) -> Result<Expression, String> {
         if let Token::Number(raw) = self.next() {
             if let Some(i32) = raw.parse::<i32>().ok() {
-                return Ok(Expression::Literal(Literal::i32(i32)));
+                return Ok(Expression::Literal(Literal::I32(i32)));
             } else if let Some(u32) = raw.parse::<u32>().ok() {
-                return Ok(Expression::Literal(Literal::u32(u32)));
+                return Ok(Expression::Literal(Literal::U32(u32)));
             } else if let Some(i64) = raw.parse::<i64>().ok() {
-                return Ok(Expression::Literal(Literal::i64(i64)));
+                return Ok(Expression::Literal(Literal::I64(i64)));
             } else if let Some(u64) = raw.parse::<u64>().ok() {
-                return Ok(Expression::Literal(Literal::u64(u64)));
+                return Ok(Expression::Literal(Literal::U64(u64)));
             } else if let Some(f64) = raw.parse::<f64>().ok() {
-                return Ok(Expression::Literal(Literal::f64(f64)));
+                return Ok(Expression::Literal(Literal::F64(f64)));
             } else {
                 return Err(format!("could not parse number literal: {}", raw));
             }
@@ -837,8 +837,8 @@ impl Parser {
             Err("expected number literal".to_string())
         }
     }
-    fn parseSIMDLiteral(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::LeftBrace)?;
+    fn parse_simd_literal(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::LeftBrace)?;
 
         let mut elements = Vec::new();
         loop {
@@ -849,13 +849,13 @@ impl Parser {
             }
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        self.eatToken(Token::RightBrace)?;
+        self.eat_token(Token::RightBrace)?;
 
         macro_rules! simdify {
             ($arr:expr, $ttype:ty, $len:expr) => {{
@@ -875,13 +875,13 @@ impl Parser {
                     })
                 {
                     let f64x2 = simdify!(elements, f64, 2);
-                    Ok(Expression::Literal(Literal::f64x2(f64x2)))
+                    Ok(Expression::Literal(Literal::F64x2(f64x2)))
                 } else if elements.iter().all(|e| e.parse::<i64>().is_ok()) {
                     let i64x2 = simdify!(elements, i64, 2);
-                    Ok(Expression::Literal(Literal::i64x2(i64x2)))
+                    Ok(Expression::Literal(Literal::I64x2(i64x2)))
                 } else if elements.iter().all(|e| e.parse::<u64>().is_ok()) {
                     let u64x2 = simdify!(elements, u64, 2);
-                    Ok(Expression::Literal(Literal::u64x2(u64x2)))
+                    Ok(Expression::Literal(Literal::U64x2(u64x2)))
                 } else {
                     Err("SIMD literal could not fit into any shape".to_string())
                 }
@@ -893,13 +893,13 @@ impl Parser {
                     })
                 {
                     let f32x4 = simdify!(elements, f32, 4);
-                    Ok(Expression::Literal(Literal::f32x4(f32x4)))
+                    Ok(Expression::Literal(Literal::F32x4(f32x4)))
                 } else if elements.iter().all(|e| e.parse::<i32>().is_ok()) {
                     let i32x4 = simdify!(elements, i32, 4);
-                    Ok(Expression::Literal(Literal::i32x4(i32x4)))
+                    Ok(Expression::Literal(Literal::I32x4(i32x4)))
                 } else if elements.iter().all(|e| e.parse::<u32>().is_ok()) {
                     let u32x4 = simdify!(elements, u32, 4);
-                    Ok(Expression::Literal(Literal::u32x4(u32x4)))
+                    Ok(Expression::Literal(Literal::U32x4(u32x4)))
                 } else {
                     Err("SIMD literal could not fit into any shape".to_string())
                 }
@@ -907,10 +907,10 @@ impl Parser {
             8 => {
                 if elements.iter().all(|e| e.parse::<i16>().is_ok()) {
                     let i16x8 = simdify!(elements, i16, 8);
-                    Ok(Expression::Literal(Literal::i16x8(i16x8)))
+                    Ok(Expression::Literal(Literal::I16x8(i16x8)))
                 } else if elements.iter().all(|e| e.parse::<u16>().is_ok()) {
                     let u16x8 = simdify!(elements, u16, 8);
-                    Ok(Expression::Literal(Literal::u16x8(u16x8)))
+                    Ok(Expression::Literal(Literal::U16x8(u16x8)))
                 } else {
                     Err("SIMD literal could not fit into any shape".to_string())
                 }
@@ -918,10 +918,10 @@ impl Parser {
             16 => {
                 if elements.iter().all(|e| e.parse::<i8>().is_ok()) {
                     let i8x16 = simdify!(elements, i8, 16);
-                    Ok(Expression::Literal(Literal::i8x16(i8x16)))
+                    Ok(Expression::Literal(Literal::I8x16(i8x16)))
                 } else if elements.iter().all(|e| e.parse::<u8>().is_ok()) {
                     let u8x16 = simdify!(elements, u8, 16);
-                    Ok(Expression::Literal(Literal::u8x16(u8x16)))
+                    Ok(Expression::Literal(Literal::U8x16(u8x16)))
                 } else {
                     Err("SIMD literal could not fit into any shape".to_string())
                 }
@@ -929,19 +929,19 @@ impl Parser {
             _ => Err("SIMD literal could not fit into any shape".to_string()),
         }
     }
-    fn parseStringLiteral(&mut self) -> Result<Literal, String> {
+    fn parse_string_literal(&mut self) -> Result<Literal, String> {
         if let Token::String(raw) = self.next() {
-            Ok(Literal::string(raw.to_string()))
+            Ok(Literal::String(raw.to_string()))
         } else {
             Err("expected string literal".to_string())
         }
     }
-    fn parseStructLiteral(&mut self, typeAnnotation: Identifier) -> Result<Expression, String> {
-        self.eatToken(Token::LeftBrace)?;
+    fn parse_struct_literal(&mut self, type_annotation: Identifier) -> Result<Expression, String> {
+        self.eat_token(Token::LeftBrace)?;
 
-        let typeAnnotation = TypeIdentifier::Identifier {
+        let type_annotation = TypeIdentifier::Identifier {
             is_ref: false,
-            name: typeAnnotation,
+            name: type_annotation,
         };
 
         let mut properties = Vec::new();
@@ -950,12 +950,12 @@ impl Parser {
                 break;
             }
 
-            let key = self.parseIdentifier()?;
+            let key = self.parse_identifier()?;
 
             properties.push(Property {
                 value: if matches!(self.peek(), Token::Colon) {
-                    self.eatToken(Token::Colon)?;
-                    self.parseExpression()?
+                    self.eat_token(Token::Colon)?;
+                    self.parse_expression()?
                 } else {
                     Expression::Identifier(key.clone())
                 },
@@ -963,21 +963,21 @@ impl Parser {
             });
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        self.eatToken(Token::RightBrace)?;
+        self.eat_token(Token::RightBrace)?;
 
         Ok(Expression::ObjectExpression {
-            typeAnnotation,
+            type_annotation,
             properties,
         })
     }
-    fn parseArrayLiteral(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::LeftBracket)?;
+    fn parse_array_literal(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::LeftBracket)?;
 
         let mut elements = Vec::new();
         loop {
@@ -985,21 +985,21 @@ impl Parser {
                 break;
             }
 
-            elements.push(self.parseExpression()?);
+            elements.push(self.parse_expression()?);
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        self.eatToken(Token::RightBracket)?;
+        self.eat_token(Token::RightBracket)?;
 
         Ok(Expression::ArrayExpression { elements })
     }
-    fn parseCallExpression(&mut self, caller: Expression) -> Result<Expression, String> {
-        self.eatToken(Token::LeftParen)?;
+    fn parse_call_expression(&mut self, caller: Expression) -> Result<Expression, String> {
+        self.eat_token(Token::LeftParen)?;
 
         let mut arguments = Vec::new();
         loop {
@@ -1007,30 +1007,30 @@ impl Parser {
                 break;
             }
 
-            arguments.push(self.parseExpression()?);
+            arguments.push(self.parse_expression()?);
 
             if matches!(self.peek(), Token::Comma) {
-                self.eatToken(Token::Comma)?;
+                self.eat_token(Token::Comma)?;
             } else {
                 break;
             }
         }
 
-        self.eatToken(Token::RightParen)?;
+        self.eat_token(Token::RightParen)?;
 
         Ok(Expression::CallExpression {
             callee: Box::new(caller),
             arguments,
         })
     }
-    fn parseMemberExpression(&mut self, parent: Expression) -> Result<Expression, String> {
+    fn parse_member_expression(&mut self, parent: Expression) -> Result<Expression, String> {
         let mut parent = parent;
 
         // todo: check if this is correct
         loop {
-            self.eatToken(Token::Period)?;
+            self.eat_token(Token::Period)?;
 
-            let property = self.parseIdentifier()?;
+            let property = self.parse_identifier()?;
 
             parent = Expression::MemberExpression {
                 object: Box::new(parent),
@@ -1044,15 +1044,15 @@ impl Parser {
 
         Ok(parent)
     }
-    fn parseIndexExpression(&mut self, parent: Expression) -> Result<Expression, String> {
+    fn parse_index_expression(&mut self, parent: Expression) -> Result<Expression, String> {
         let mut parent = parent;
 
         loop {
-            self.eatToken(Token::LeftBracket)?;
+            self.eat_token(Token::LeftBracket)?;
 
-            let index = self.parseExpression()?;
+            let index = self.parse_expression()?;
 
-            self.eatToken(Token::RightBracket)?;
+            self.eat_token(Token::RightBracket)?;
 
             parent = Expression::IndexExpression {
                 object: Box::new(parent),
@@ -1066,34 +1066,34 @@ impl Parser {
 
         Ok(parent)
     }
-    fn parseEmptyExpression(&mut self) -> Result<Expression, String> {
+    fn parse_empty_expression(&mut self) -> Result<Expression, String> {
         Ok(Expression::EmptyExpression)
     }
-    fn parseContinueExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::Continue)?;
+    fn parse_continue_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::Continue)?;
         Ok(Expression::ContinueExpression)
     }
-    fn parseBreakExpression(&mut self) -> Result<Expression, String> {
-        self.eatToken(Token::Break)?;
+    fn parse_break_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::Break)?;
         Ok(Expression::BreakExpression)
     }
-    fn parseUnaryExpression(&mut self) -> Result<Expression, String> {
+    fn parse_unary_expression(&mut self) -> Result<Expression, String> {
         let operator = self.next().clone();
-        if !unary_operators.contains(&operator) {
+        if !UNARY_OPERATORS.contains(&operator) {
             return Err(format!(
                 "unexpected token in unary expression: {:?}",
                 operator
             ));
         }
 
-        let argument = Box::new(self.parseExpression()?);
+        let argument = Box::new(self.parse_expression()?);
 
         Ok(Expression::UnaryExpression { operator, argument })
     }
 
-    fn parseType(&mut self) -> Result<TypeIdentifier, String> {
+    fn parse_type(&mut self) -> Result<TypeIdentifier, String> {
         let is_ref = if matches!(self.peek(), Token::Ref) {
-            self.eatToken(Token::Ref)?;
+            self.eat_token(Token::Ref)?;
             true
         } else {
             false
@@ -1101,11 +1101,11 @@ impl Parser {
 
         match self.peek() {
             Token::Identifier(_) => {
-                let name = self.parseIdentifier()?;
+                let name = self.parse_identifier()?;
                 Ok(TypeIdentifier::Identifier { is_ref, name })
             }
             Token::LeftParen => {
-                self.eatToken(Token::LeftParen)?;
+                self.eat_token(Token::LeftParen)?;
 
                 let mut parameters = Vec::new();
                 let mut unnamed = 0;
@@ -1116,10 +1116,10 @@ impl Parser {
 
                     let name;
                     if matches!(self.peek(), Token::Identifier(_))
-                        && matches!(self.getToken(self.index + 1), Token::Colon)
+                        && matches!(self.get_token(self.index + 1), Token::Colon)
                     {
-                        name = self.parseIdentifier()?;
-                        self.eatToken(Token::Colon)?;
+                        name = self.parse_identifier()?;
+                        self.eat_token(Token::Colon)?;
                     } else {
                         name = format!("$${}", unnamed);
                         unnamed += 1;
@@ -1127,21 +1127,21 @@ impl Parser {
 
                     parameters.push(TypedParameter {
                         name,
-                        typeAnnotation: self.parseType()?,
+                        type_annotation: self.parse_type()?,
                     });
 
                     if matches!(self.peek(), Token::Comma) {
-                        self.eatToken(Token::Comma)?;
+                        self.eat_token(Token::Comma)?;
                     } else {
                         break;
                     }
                 }
-                self.eatToken(Token::RightParen)?;
+                self.eat_token(Token::RightParen)?;
 
-                self.eatToken(Token::Assignment)?;
-                self.eatToken(Token::GreaterThan)?;
+                self.eat_token(Token::Assignment)?;
+                self.eat_token(Token::GreaterThan)?;
 
-                let return_type = Box::new(self.parseType()?);
+                let return_type = Box::new(self.parse_type()?);
 
                 Ok(TypeIdentifier::Function {
                     is_ref,
@@ -1150,14 +1150,14 @@ impl Parser {
                 })
             }
             Token::LeftBracket => {
-                self.eatToken(Token::LeftBracket)?;
+                self.eat_token(Token::LeftBracket)?;
 
-                let element_type = Box::new(self.parseType()?);
+                let element_type = Box::new(self.parse_type()?);
                 let ident = TypeIdentifier::Array {
                     is_ref,
                     element_type,
                     size: if matches!(self.peek(), Token::SemiColon) {
-                        self.eatToken(Token::SemiColon)?;
+                        self.eat_token(Token::SemiColon)?;
                         if let Token::Number(raw) = self.next() {
                             raw.parse::<usize>().unwrap()
                         } else {
@@ -1168,7 +1168,7 @@ impl Parser {
                     },
                 };
 
-                self.eatToken(Token::RightBracket)?;
+                self.eat_token(Token::RightBracket)?;
 
                 Ok(ident)
             }
@@ -1176,7 +1176,7 @@ impl Parser {
         }
     }
 
-    fn constructBinaryExpression(
+    fn construct_binary_expression(
         &self,
         left: Expression,
         operator: Token,
@@ -1230,11 +1230,11 @@ impl Parser {
         }
     }
 
-    fn getToken(&self, idx: usize) -> &Token {
+    fn get_token(&self, idx: usize) -> &Token {
         self.tokens.get(idx).unwrap_or(&Token::EOF)
     }
 
-    fn expectToken(&self, token: Token) -> Result<(), String> {
+    fn expect_token(&self, token: Token) -> Result<(), String> {
         if *self.peek() == token {
             Ok(())
         } else {
@@ -1242,18 +1242,18 @@ impl Parser {
         }
     }
 
-    fn eatToken(&mut self, token: Token) -> Result<(), String> {
-        self.expectToken(token)?;
+    fn eat_token(&mut self, token: Token) -> Result<(), String> {
+        self.expect_token(token)?;
         self.next();
         Ok(())
     }
 
     fn peek(&self) -> &Token {
-        self.getToken(self.index)
+        self.get_token(self.index)
     }
 
     fn next(&mut self) -> &Token {
         self.index += 1;
-        self.getToken(self.index - 1)
+        self.get_token(self.index - 1)
     }
 }
