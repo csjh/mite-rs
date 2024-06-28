@@ -1,11 +1,15 @@
 [build]
 target = "wasm32-unknown-emscripten"
 rustflags = [
-    "-L./binaryen/lib",
-    "-lbinaryen",
     "-Ctarget-feature=+bulk-memory,+nontrapping-fptoint,+simd128",
+    "-Clink-arg=-L./binaryen/lib",
+    "-Clink-arg=-lbinaryen",
     "-Clink-arg=-sALLOW_MEMORY_GROWTH=1",
-    "-Zlink-native-libraries=false",
     "-Clink-args=-sWASM_BIGINT",
+    "-Clink-args=-sRESERVED_FUNCTION_POINTERS=20",
+    "-Clink-args=-sALLOW_TABLE_GROWTH",
+    "-Clink-args=-sEXPORTED_RUNTIME_METHODS=addFunction,removeFunction,ccall,stackAlloc",
+    "-Clink-args=-sEXPORT_ES6",
+    "-Zlink-native-libraries=false",
 ]
 
