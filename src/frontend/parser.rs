@@ -32,11 +32,6 @@ const PRECEDENCE: [&'static [Token]; 11] = [
     ],
 ];
 
-pub(crate) struct Parser {
-    tokens: Vec<Token>,
-    index: usize,
-}
-
 pub(crate) type Identifier = String;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -240,6 +235,11 @@ pub(crate) enum Expression {
 
 pub fn parse(tokens: Vec<Token>) -> Program {
     Parser::parse(tokens)
+}
+
+pub(crate) struct Parser {
+    tokens: Vec<Token>,
+    index: usize,
 }
 
 impl Parser {
