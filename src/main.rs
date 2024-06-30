@@ -1,6 +1,8 @@
 mod binaryen;
 mod frontend;
 
+use frontend::ir::ResolvedImport;
+
 use crate::binaryen::*;
 
 #[no_mangle]
@@ -15,7 +17,15 @@ pub extern "C" fn compile(input: *const u8, input_len: usize, cb: extern "C" fn(
     let ast = frontend::parser::parse(tokens);
     println!("{:?}", ast);
 
-    let ir = frontend::ir::ast_to_ir(ast);
+    let ir = frontend::ir::ast_to_ir(
+        ast,
+        frontend::ir::Options {
+            resolve_import: |_path| ResolvedImport {
+                is_mite: false,
+                source: "".to_string(),
+            },
+        },
+    );
 
     cb(input.as_ptr(), input.len());
 }

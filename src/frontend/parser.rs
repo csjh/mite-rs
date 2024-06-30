@@ -56,34 +56,34 @@ pub(crate) type ProgramBody = Declaration;
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Program {
-    body: Vec<ProgramBody>,
+    pub body: Vec<ProgramBody>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct TypedParameter {
-    name: Identifier,
-    type_annotation: TypeIdentifier,
+    pub name: Identifier,
+    pub type_annotation: TypeIdentifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct FunctionDeclaration {
-    name: Identifier,
-    parameters: Vec<TypedParameter>,
-    return_type: TypeIdentifier,
-    body: Expression,
+    pub name: Identifier,
+    pub parameters: Vec<TypedParameter>,
+    pub return_type: TypeIdentifier,
+    pub body: Expression,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Property {
-    key: Identifier,
-    value: Expression,
+    pub key: Identifier,
+    pub value: Expression,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct VariableDeclarator {
-    id: Identifier,
-    init: Option<Expression>,
-    type_annotation: Option<TypeIdentifier>,
+    pub id: Identifier,
+    pub init: Option<Expression>,
+    pub type_annotation: Option<TypeIdentifier>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -110,15 +110,15 @@ pub(crate) enum Literal {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct StructField {
-    name: Identifier,
-    type_annotation: TypeIdentifier,
+    pub name: Identifier,
+    pub type_annotation: TypeIdentifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct ImportSpecifier {
-    local: Identifier,
-    imported: Identifier,
-    type_annotation: Option<TypeIdentifier>,
+    pub local: Identifier,
+    pub imported: Identifier,
+    pub type_annotation: Option<TypeIdentifier>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -237,7 +237,7 @@ pub fn parse(tokens: Vec<Token>) -> Program {
     Parser::parse(tokens)
 }
 
-pub(crate) struct Parser {
+struct Parser {
     tokens: Vec<Token>,
     index: usize,
 }
