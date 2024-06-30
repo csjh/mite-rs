@@ -52,11 +52,9 @@ pub(crate) enum TypeIdentifier {
     },
 }
 
-pub(crate) type ProgramBody = Declaration;
-
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Program {
-    pub body: Vec<ProgramBody>,
+    pub body: Vec<Declaration>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -128,12 +126,15 @@ pub(crate) enum VariableKind {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub(crate) struct VariableDeclaration {
+    pub declarations: Vec<VariableDeclarator>,
+    pub kind: VariableKind,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Declaration {
     FunctionDeclaration(FunctionDeclaration),
-    VariableDeclaration {
-        declarations: Vec<VariableDeclarator>,
-        kind: VariableKind,
-    },
+    VariableDeclaration(VariableDeclaration),
     StructDeclaration {
         id: Identifier,
         fields: Vec<StructField>,
@@ -150,14 +151,13 @@ pub(crate) enum Declaration {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Statement {
-    ExpressionStatement { expression: Expression },
-    ReturnStatement { argument: Option<Expression> },
-    Declaration(Declaration),
+    ExpressionStatement(Expression),
+    VariableDeclaration(VariableDeclaration),
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum ForExpressionInit {
-    VariableDeclaration(Declaration),
+    VariableDeclaration(VariableDeclaration),
     Expression(Expression),
 }
 
@@ -231,6 +231,9 @@ pub(crate) enum Expression {
         object: Box<Expression>,
         index: Box<Expression>,
     },
+    ReturnExpression {
+        argument: Option<Box<Expression>>,
+    },
 }
 
 pub fn parse(tokens: Vec<Token>) -> Program {
@@ -276,21 +279,23 @@ impl Parser {
         Program { body }
     }
 
-    fn parse_top_level_declaration(&mut self) -> Result<ProgramBody, String> {
+    fn parse_top_level_declaration(&mut self) -> Result<Declaration, String> {
         match self.peek() {
-            Token::Fn => Ok(Declaration::FunctionDeclaration(self.parse_function(false)?)),
+            Token::Fn => Ok(Declaration::FunctionDeclaration(
+                self.parse_function(false)?,
+            )),
             Token::Struct => self.parse_struct(),
             Token::Export => self.parse_export(),
             Token::Import => self.parse_import(),
             Token::Let | Token::Const => {
-                let decl = self.parse_variable_declaration();
+                let decl = self.parse_variable_declaration()?;
                 self.eat_token(Token::SemiColon)?;
-                decl
+                Ok(Declaration::VariableDeclaration(decl))
             }
             token => Err(format!("unexpected token at top level: {:?}", token)),
         }
     }
-    fn parse_import(&mut self) -> Result<ProgramBody, String> {
+    fn parse_import(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::Import)?;
         self.eat_token(Token::LeftBrace)?;
 
@@ -332,21 +337,21 @@ impl Parser {
 
         self.eat_token(Token::SemiColon)?;
 
-        Ok(ProgramBody::ImportDeclaration { source, specifiers })
+        Ok(Declaration::ImportDeclaration { source, specifiers })
     }
-    fn parse_export(&mut self) -> Result<ProgramBody, String> {
+    fn parse_export(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::EOF)?;
 
         match self.parse_top_level_declaration()? {
-            ProgramBody::ExportNamedDeclaration { .. } | ProgramBody::ImportDeclaration { .. } => {
+            Declaration::ExportNamedDeclaration { .. } | Declaration::ImportDeclaration { .. } => {
                 Err("export/import cannot be nested".to_string())
             }
-            decl => Ok(ProgramBody::ExportNamedDeclaration {
+            decl => Ok(Declaration::ExportNamedDeclaration {
                 declaration: Box::new(decl),
             }),
         }
     }
-    fn parse_struct(&mut self) -> Result<ProgramBody, String> {
+    fn parse_struct(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::Struct)?;
 
         let id = self.parse_identifier()?;
@@ -392,7 +397,7 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(ProgramBody::StructDeclaration {
+        Ok(Declaration::StructDeclaration {
             id,
             fields,
             methods,
@@ -440,7 +445,7 @@ impl Parser {
             body,
         })
     }
-    fn parse_variable_declaration(&mut self) -> Result<ProgramBody, String> {
+    fn parse_variable_declaration(&mut self) -> Result<VariableDeclaration, String> {
         let kind = match self.peek() {
             Token::Let => VariableKind::Let,
             Token::Const => VariableKind::Const,
@@ -489,26 +494,18 @@ impl Parser {
             }
         }
 
-        Ok(ProgramBody::VariableDeclaration { declarations, kind })
+        Ok(VariableDeclaration { declarations, kind })
     }
 
     fn parse_statement(&mut self) -> Result<Statement, String> {
         let statement;
 
         match self.peek() {
-            Token::Return => {
-                self.eat_token(Token::Return)?;
-                statement = Statement::ReturnStatement {
-                    argument: Some(self.parse_expression()?),
-                };
-            }
             Token::Let | Token::Const => {
-                statement = Statement::Declaration(self.parse_variable_declaration()?);
+                statement = Statement::VariableDeclaration(self.parse_variable_declaration()?);
             }
             _ => {
-                statement = Statement::ExpressionStatement {
-                    expression: self.parse_expression()?,
-                };
+                statement = Statement::ExpressionStatement(self.parse_expression()?);
             }
         }
 
@@ -521,7 +518,7 @@ impl Parser {
         let mut expression_stack = Vec::new();
         let mut operator_stack = Vec::new();
 
-        if matches!(self.peek(), Token::Return | Token::Let | Token::Const) {
+        if matches!(self.peek(), Token::Let | Token::Const) {
             self.index -= 1;
             return Ok(Expression::BlockExpression {
                 body: vec![self.parse_statement()?],
@@ -562,6 +559,9 @@ impl Parser {
                 }
                 Token::Not | Token::BitwiseNot | Token::Plus | Token::Minus => {
                     expression_stack.push(self.parse_unary_expression()?);
+                }
+                Token::Return => {
+                    expression_stack.push(self.parse_return_expression()?);
                 }
                 _ => (),
             }
@@ -1174,6 +1174,17 @@ impl Parser {
             }
             token => Err(format!("unexpected token in type: {:?}", token)),
         }
+    }
+    fn parse_return_expression(&mut self) -> Result<Expression, String> {
+        self.eat_token(Token::Return)?;
+
+        let argument = if matches!(self.peek(), Token::SemiColon) {
+            None
+        } else {
+            Some(Box::new(self.parse_expression()?))
+        };
+
+        Ok(Expression::ReturnExpression { argument })
     }
 
     fn construct_binary_expression(
