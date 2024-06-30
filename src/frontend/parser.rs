@@ -156,12 +156,6 @@ pub(crate) enum Statement {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub(crate) enum ForExpressionInit {
-    VariableDeclaration(VariableDeclaration),
-    Expression(Expression),
-}
-
-#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Expression {
     Identifier(Identifier),
     Literal(Literal),
@@ -179,7 +173,7 @@ pub(crate) enum Expression {
         body: Box<Expression>,
     },
     ForExpression {
-        init: Option<Box<ForExpressionInit>>,
+        init: Option<Box<Statement>>,
         test: Option<Box<Expression>>,
         update: Option<Box<Expression>>,
         body: Box<Expression>,
@@ -720,10 +714,10 @@ impl Parser {
             None
         } else if matches!(self.peek(), Token::Let | Token::Const) {
             let decl = self.parse_variable_declaration()?;
-            Some(Box::new(ForExpressionInit::VariableDeclaration(decl)))
+            Some(Box::new(Statement::VariableDeclaration(decl)))
         } else {
             let expr = self.parse_expression()?;
-            Some(Box::new(ForExpressionInit::Expression(expr)))
+            Some(Box::new(Statement::ExpressionStatement(expr)))
         };
 
         self.eat_token(Token::SemiColon)?;
