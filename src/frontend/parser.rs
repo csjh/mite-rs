@@ -156,6 +156,55 @@ pub(crate) enum Statement {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub(crate) enum UnaryOperator {
+    Not,
+    BitwiseNot,
+    Plus,
+    Minus,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) enum BinaryOperator {
+    Star,
+    Slash,
+    Remainder,
+    Plus,
+    Minus,
+    BitshiftLeft,
+    BitshiftRight,
+    LessThan,
+    LessThanEquals,
+    GreaterThan,
+    GreaterThanEquals,
+    Equals,
+    NotEquals,
+    And,
+    Xor,
+    Or,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) enum AssignmentOperator {
+    Assignment,
+    AssignmentPlus,
+    AssignmentMinus,
+    AssignmentStar,
+    AssignmentSlash,
+    AssignmentRemainder,
+    AssignmentBitwiseAnd,
+    AssignmentBitwiseXor,
+    AssignmentBitwiseOr,
+    AssignmentBitshiftLeft,
+    AssignmentBitshiftRight,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) enum LogicalOperator {
+    And,
+    Or,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Expression {
     Identifier(Identifier),
     Literal(Literal),
@@ -190,21 +239,21 @@ pub(crate) enum Expression {
         expressions: Vec<Expression>,
     },
     UnaryExpression {
-        operator: Token,
+        operator: UnaryOperator,
         argument: Box<Expression>,
     },
     BinaryExpression {
-        operator: Token,
+        operator: BinaryOperator,
         left: Box<Expression>,
         right: Box<Expression>,
     },
     AssignmentExpression {
-        operator: Token,
+        operator: AssignmentOperator,
         left: Box<Expression>,
         right: Box<Expression>,
     },
     LogicalExpression {
-        operator: Token,
+        operator: LogicalOperator,
         left: Box<Expression>,
         right: Box<Expression>,
     },
@@ -1082,7 +1131,16 @@ impl Parser {
 
         let argument = Box::new(self.parse_expression()?);
 
-        Ok(Expression::UnaryExpression { operator, argument })
+        Ok(Expression::UnaryExpression {
+            operator: match operator {
+                Token::Not => UnaryOperator::Not,
+                Token::BitwiseNot => UnaryOperator::BitwiseNot,
+                Token::Plus => UnaryOperator::Plus,
+                Token::Minus => UnaryOperator::Minus,
+                _ => unreachable!(),
+            },
+            argument,
+        })
     }
 
     fn parse_type(&mut self) -> Result<TypeIdentifier, String> {
@@ -1199,7 +1257,20 @@ impl Parser {
             | Token::AssignmentBitwiseAnd
             | Token::AssignmentBitwiseOr
             | Token::AssignmentBitwiseXor => Ok(Expression::AssignmentExpression {
-                operator,
+                operator: match operator {
+                    Token::Assignment => AssignmentOperator::Assignment,
+                    Token::AssignmentPlus => AssignmentOperator::AssignmentPlus,
+                    Token::AssignmentMinus => AssignmentOperator::AssignmentMinus,
+                    Token::AssignmentStar => AssignmentOperator::AssignmentStar,
+                    Token::AssignmentSlash => AssignmentOperator::AssignmentSlash,
+                    Token::AssignmentRemainder => AssignmentOperator::AssignmentRemainder,
+                    Token::AssignmentBitwiseAnd => AssignmentOperator::AssignmentBitwiseAnd,
+                    Token::AssignmentBitwiseOr => AssignmentOperator::AssignmentBitwiseOr,
+                    Token::AssignmentBitwiseXor => AssignmentOperator::AssignmentBitwiseXor,
+                    Token::AssignmentBitshiftLeft => AssignmentOperator::AssignmentBitshiftLeft,
+                    Token::AssignmentBitshiftRight => AssignmentOperator::AssignmentBitshiftRight,
+                    _ => unreachable!(),
+                },
                 left: Box::new(left),
                 right: Box::new(right),
             }),
@@ -1219,12 +1290,34 @@ impl Parser {
             | Token::BitwiseXor
             | Token::BitshiftLeft
             | Token::BitshiftRight => Ok(Expression::BinaryExpression {
-                operator,
+                operator: match operator {
+                    Token::Equals => BinaryOperator::Equals,
+                    Token::NotEquals => BinaryOperator::NotEquals,
+                    Token::LessThan => BinaryOperator::LessThan,
+                    Token::LessThanEquals => BinaryOperator::LessThanEquals,
+                    Token::GreaterThan => BinaryOperator::GreaterThan,
+                    Token::GreaterThanEquals => BinaryOperator::GreaterThanEquals,
+                    Token::Plus => BinaryOperator::Plus,
+                    Token::Minus => BinaryOperator::Minus,
+                    Token::Star => BinaryOperator::Star,
+                    Token::Slash => BinaryOperator::Slash,
+                    Token::Remainder => BinaryOperator::Remainder,
+                    Token::BitwiseAnd => BinaryOperator::And,
+                    Token::BitwiseOr => BinaryOperator::Or,
+                    Token::BitwiseXor => BinaryOperator::Xor,
+                    Token::BitshiftLeft => BinaryOperator::BitshiftLeft,
+                    Token::BitshiftRight => BinaryOperator::BitshiftRight,
+                    _ => unreachable!(),
+                },
                 left: Box::new(left),
                 right: Box::new(right),
             }),
             Token::LogicalAnd | Token::LogicalOr => Ok(Expression::LogicalExpression {
-                operator,
+                operator: match operator {
+                    Token::LogicalAnd => LogicalOperator::And,
+                    Token::LogicalOr => LogicalOperator::Or,
+                    _ => unreachable!(),
+                },
                 left: Box::new(left),
                 right: Box::new(right),
             }),
