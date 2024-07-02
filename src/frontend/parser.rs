@@ -140,9 +140,7 @@ pub(crate) enum Declaration {
         fields: Vec<StructField>,
         methods: Vec<FunctionDeclaration>,
     },
-    Export {
-        declaration: Box<Declaration>,
-    },
+    Export(Box<Declaration>),
     Import {
         source: Literal,
         specifiers: Vec<ImportSpecifier>,
@@ -151,7 +149,7 @@ pub(crate) enum Declaration {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Statement {
-    ExpressionStatement(Expression),
+    Expression(Expression),
     VariableDeclaration(VariableDeclaration),
 }
 
@@ -185,17 +183,17 @@ pub(crate) enum BinaryOperator {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum AssignmentOperator {
-    Assignment,
-    AssignmentPlus,
-    AssignmentMinus,
-    AssignmentStar,
-    AssignmentSlash,
-    AssignmentRemainder,
-    AssignmentBitwiseAnd,
-    AssignmentBitwiseXor,
-    AssignmentBitwiseOr,
-    AssignmentBitshiftLeft,
-    AssignmentBitshiftRight,
+    Base,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Remainder,
+    BitwiseAnd,
+    BitwiseXor,
+    BitwiseOr,
+    BitshiftLeft,
+    BitshiftRight,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -384,12 +382,10 @@ impl Parser {
         self.eat_token(Token::EOF)?;
 
         match self.parse_top_level_declaration()? {
-            Declaration::Export { .. } | Declaration::Import { .. } => {
+            Declaration::Export(_) | Declaration::Import { .. } => {
                 Err("export/import cannot be nested".to_string())
             }
-            decl => Ok(Declaration::Export {
-                declaration: Box::new(decl),
-            }),
+            decl => Ok(Declaration::Export(Box::new(decl))),
         }
     }
     fn parse_struct(&mut self) -> Result<Declaration, String> {
@@ -546,7 +542,7 @@ impl Parser {
                 statement = Statement::VariableDeclaration(self.parse_variable_declaration()?);
             }
             _ => {
-                statement = Statement::ExpressionStatement(self.parse_expression()?);
+                statement = Statement::Expression(self.parse_expression()?);
             }
         }
 
@@ -764,7 +760,7 @@ impl Parser {
             Some(Box::new(Statement::VariableDeclaration(decl)))
         } else {
             let expr = self.parse_expression()?;
-            Some(Box::new(Statement::ExpressionStatement(expr)))
+            Some(Box::new(Statement::Expression(expr)))
         };
 
         self.eat_token(Token::SemiColon)?;
@@ -1256,17 +1252,17 @@ impl Parser {
             | Token::AssignmentBitwiseOr
             | Token::AssignmentBitwiseXor => Ok(Expression::Assignment {
                 operator: match operator {
-                    Token::Assignment => AssignmentOperator::Assignment,
-                    Token::AssignmentPlus => AssignmentOperator::AssignmentPlus,
-                    Token::AssignmentMinus => AssignmentOperator::AssignmentMinus,
-                    Token::AssignmentStar => AssignmentOperator::AssignmentStar,
-                    Token::AssignmentSlash => AssignmentOperator::AssignmentSlash,
-                    Token::AssignmentRemainder => AssignmentOperator::AssignmentRemainder,
-                    Token::AssignmentBitwiseAnd => AssignmentOperator::AssignmentBitwiseAnd,
-                    Token::AssignmentBitwiseOr => AssignmentOperator::AssignmentBitwiseOr,
-                    Token::AssignmentBitwiseXor => AssignmentOperator::AssignmentBitwiseXor,
-                    Token::AssignmentBitshiftLeft => AssignmentOperator::AssignmentBitshiftLeft,
-                    Token::AssignmentBitshiftRight => AssignmentOperator::AssignmentBitshiftRight,
+                    Token::Assignment => AssignmentOperator::Base,
+                    Token::AssignmentPlus => AssignmentOperator::Plus,
+                    Token::AssignmentMinus => AssignmentOperator::Minus,
+                    Token::AssignmentStar => AssignmentOperator::Star,
+                    Token::AssignmentSlash => AssignmentOperator::Slash,
+                    Token::AssignmentRemainder => AssignmentOperator::Remainder,
+                    Token::AssignmentBitwiseAnd => AssignmentOperator::BitwiseAnd,
+                    Token::AssignmentBitwiseOr => AssignmentOperator::BitwiseOr,
+                    Token::AssignmentBitwiseXor => AssignmentOperator::BitwiseXor,
+                    Token::AssignmentBitshiftLeft => AssignmentOperator::BitshiftLeft,
+                    Token::AssignmentBitshiftRight => AssignmentOperator::BitshiftRight,
                     _ => unreachable!(),
                 },
                 left: Box::new(left),
