@@ -132,19 +132,25 @@ pub(crate) struct VariableDeclaration {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub(crate) struct StructDeclaration {
+    pub id: Identifier,
+    pub fields: Vec<StructField>,
+    pub methods: Vec<FunctionDeclaration>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct ImportDeclaration {
+    pub source: Literal,
+    pub specifiers: Vec<ImportSpecifier>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Declaration {
     Function(FunctionDeclaration),
     Variable(VariableDeclaration),
-    Struct {
-        id: Identifier,
-        fields: Vec<StructField>,
-        methods: Vec<FunctionDeclaration>,
-    },
+    Struct(StructDeclaration),
     Export(Box<Declaration>),
-    Import {
-        source: Literal,
-        specifiers: Vec<ImportSpecifier>,
-    },
+    Import(ImportDeclaration),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -376,7 +382,10 @@ impl Parser {
 
         self.eat_token(Token::SemiColon)?;
 
-        Ok(Declaration::Import { source, specifiers })
+        Ok(Declaration::Import(ImportDeclaration {
+            source,
+            specifiers,
+        }))
     }
     fn parse_export(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::EOF)?;
@@ -434,11 +443,11 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(Declaration::Struct {
+        Ok(Declaration::Struct(StructDeclaration {
             id,
             fields,
             methods,
-        })
+        }))
     }
     fn parse_function(&mut self, is_method: bool) -> Result<FunctionDeclaration, String> {
         if !is_method {
