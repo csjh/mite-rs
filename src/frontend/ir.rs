@@ -1,8 +1,11 @@
 use super::{
-    mitetype::{FunctionInformation, MiteType, StructTypeInformation, TypeInformation},
+    mitetype::{
+        ArrayTypeInformation, FunctionInformation, FunctionTypeInformation, MiteType,
+        PrimitiveTypeInformation, StructTypeInformation, TypeInformation,
+    },
     type_initialization::{build_types, Types},
 };
-use crate::frontend::parser::*;
+use crate::frontend::{parser::*, tokenizer::tokenize};
 use std::collections::HashMap;
 
 pub struct ResolvedImport {
@@ -10,8 +13,9 @@ pub struct ResolvedImport {
     pub source: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct Options {
-    pub resolve_import: fn(String) -> ResolvedImport,
+    pub resolve_import: fn(&String) -> ResolvedImport,
 }
 
 pub struct IRFunction {
@@ -21,18 +25,29 @@ pub struct IRFunction {
     pub body: IRExpression,
 }
 
+#[derive(Clone)]
+pub enum Export {
+    Function(FunctionTypeInformation),
+    Struct(StructTypeInformation),
+    Variable(TypeInformation),
+}
+
 pub(crate) struct IRModule {
-    pub imports: HashMap<String, HashMap<String, TypeInformation>>,
-    pub exports: Vec<String>,
-    pub structs: HashMap<String, StructTypeInformation>,
+    pub exports: HashMap<String, Export>,
     pub globals: HashMap<String, TypeInformation>,
+    pub structs: HashMap<String, StructTypeInformation>,
+    pub imports: HashMap<String, HashMap<String, Export>>,
     pub functions: Vec<IRFunction>,
 }
 
 pub(crate) enum IRExpression {
     // same as parser
-    Literal(Literal),
+    Literal {
+        ty: PrimitiveTypeInformation,
+        value: Literal,
+    },
     Block {
+        ty: TypeInformation,
         body: Vec<IRExpression>,
     },
     Break,
@@ -53,44 +68,54 @@ pub(crate) enum IRExpression {
     },
     Empty,
     Array {
+        ty: ArrayTypeInformation,
         elements: Vec<IRExpression>,
     },
     Object {
-        type_annotation: TypeIdentifier,
+        ty: StructTypeInformation,
         properties: Vec<Property>,
     },
-    Sequence {
-        expressions: Vec<IRExpression>,
-    },
+    // this is turned into a block
+    // Sequence {
+    //     ty: TypeInformation,
+    //     expressions: Vec<IRExpression>,
+    // },
     Unary {
+        ty: TypeInformation,
         operator: UnaryOperator,
         operand: Box<IRExpression>,
     },
     Binary {
+        ty: TypeInformation,
         operator: BinaryOperator,
         left: Box<IRExpression>,
         right: Box<IRExpression>,
     },
     Assignment {
+        ty: TypeInformation,
         operator: AssignmentOperator,
         left: Box<IRExpression>,
         right: Box<IRExpression>,
     },
     Logical {
+        ty: TypeInformation,
         operator: LogicalOperator,
         left: Box<IRExpression>,
         right: Box<IRExpression>,
     },
     If {
+        ty: TypeInformation,
         test: Box<IRExpression>,
         consequent: Box<IRExpression>,
         alternate: Option<Box<IRExpression>>,
     },
     Member {
+        ty: TypeInformation,
         object: Box<IRExpression>,
         property: String,
     },
     Index {
+        ty: TypeInformation,
         object: Box<IRExpression>,
         index: Box<IRExpression>,
     },
@@ -100,35 +125,112 @@ pub(crate) enum IRExpression {
     // new
     Void(Box<IRExpression>),
     DirectCall {
-        callee: String,
+        ty: TypeInformation,
+        callee: FunctionTypeInformation,
         arguments: Vec<IRExpression>,
     },
     IndirectCall {
+        ty: TypeInformation,
         callee: Box<IRExpression>,
         arguments: Vec<IRExpression>,
     },
 }
 
-pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
-    let ctx = IRContext::from_program(&program);
+impl IRExpression {
+    pub fn ty(&self) -> TypeInformation {
+        let void = TypeInformation::Primitive(PrimitiveTypeInformation {
+            name: "void".to_string(),
+            sizeof: 0,
+        });
 
-    let module = IRModule {
+        match self {
+            IRExpression::Literal { ty, .. } => TypeInformation::Primitive(ty.clone()),
+            IRExpression::Array { ty, .. } => TypeInformation::Array(ty.clone()),
+            IRExpression::Object { ty, .. } => TypeInformation::Struct(ty.clone()),
+            IRExpression::Block { ty, .. } => ty.clone(),
+            IRExpression::Unary { ty, .. } => ty.clone(),
+            IRExpression::Binary { ty, .. } => ty.clone(),
+            IRExpression::Assignment { ty, .. } => ty.clone(),
+            IRExpression::Logical { ty, .. } => ty.clone(),
+            IRExpression::If { ty, .. } => ty.clone(),
+            IRExpression::Member { ty, .. } => ty.clone(),
+            IRExpression::Index { ty, .. } => ty.clone(),
+            IRExpression::DirectCall { ty, .. } => ty.clone(),
+            IRExpression::IndirectCall { ty, .. } => ty.clone(),
+            IRExpression::Break => void,
+            IRExpression::Continue => void,
+            IRExpression::While { .. } => void,
+            IRExpression::DoWhile { .. } => void,
+            IRExpression::For { .. } => void,
+            IRExpression::Empty => void,
+            IRExpression::Return { .. } => void,
+            IRExpression::Void(_) => void,
+        }
+    }
+}
+
+pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
+    let mut ctx = IRContext::from_program(&program);
+
+    let mut module = IRModule {
         imports: HashMap::new(),
-        exports: Vec::new(),
+        exports: HashMap::new(),
         structs: HashMap::new(),
         globals: HashMap::new(),
         functions: Vec::new(),
     };
 
-    for expr in program.body {
-        match expr {
-            Declaration::Import(decl) => {}
-            Declaration::Function(decl) => {}
-            Declaration::Struct(_) => {}
-            Declaration::Variable(decl) => {}
-            Declaration::Export(decl) => {}
-        }
+    macro_rules! for_each_decl {
+        ($type:ident, $cb:expr) => {
+            program
+                .body
+                .iter()
+                .filter_map(|decl| match decl {
+                    Declaration::$type(decl) => Some(decl.clone()),
+                    Declaration::Export(decl) => match *decl.clone() {
+                        Declaration::$type(decl) => Some(decl),
+                        _ => None,
+                    },
+                    _ => None,
+                })
+                .for_each($cb);
+        };
     }
+
+    for_each_decl!(Import, |decl| {
+        let import_data = (options.resolve_import)(&decl.source);
+        module.imports.insert(decl.source.clone(), HashMap::new());
+        let imports = module.imports.get_mut(&decl.source).unwrap();
+
+        if import_data.is_mite {
+            let tokens = tokenize(&import_data.source);
+            let ast = parse(tokens);
+            let imported_module = ast_to_ir(ast, options.clone());
+
+            for specifier in decl.specifiers {
+                let export = imported_module.exports.get(&specifier.imported);
+                if let Some(export) = export {
+                    imports.insert(specifier.local, export.clone());
+                    match export {
+                        Export::Struct(info) => {
+                            ctx.types.add(
+                                specifier.local.clone(),
+                                TypeInformation::Struct(info.clone()),
+                            );
+                        }
+                        Export::Function(info) => {
+                            ctx.globals.insert(specifier.local.clone(), info);
+                        }
+                        Export::Variable(info) => {
+                            ctx.globals.insert(specifier.local.clone(), info.clone());
+                        }
+                    }
+                } else {
+                    panic!("Imported symbol {} not found", specifier.imported);
+                }
+            }
+        }
+    });
 
     module
 }
@@ -148,7 +250,7 @@ pub(super) struct IRContext {
 }
 
 impl IRContext {
-    pub fn from_program(program: &Program) -> Self {
+    fn from_program(program: &Program) -> Self {
         let types = Types(build_types(program));
 
         IRContext {
