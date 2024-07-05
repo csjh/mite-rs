@@ -140,7 +140,7 @@ pub(crate) struct StructDeclaration {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct ImportDeclaration {
-    pub source: Literal,
+    pub source: String,
     pub specifiers: Vec<ImportSpecifier>,
 }
 
@@ -592,9 +592,9 @@ impl Parser {
                 Token::Continue => expression_stack.push(self.parse_continue_expression()?),
                 Token::Break => expression_stack.push(self.parse_break_expression()?),
                 Token::Number(_) => expression_stack.push(self.parse_number_literal()?),
-                Token::String(_) => {
-                    expression_stack.push(Expression::Literal(self.parse_string_literal()?))
-                }
+                Token::String(_) => expression_stack.push(Expression::Literal(Literal::String(
+                    self.parse_string_literal()?,
+                ))),
                 Token::Identifier(_) => {
                     let next = self.parse_identifier()?;
                     if matches!(self.get_token(self.index + 1), Token::LeftBrace) {
@@ -975,9 +975,9 @@ impl Parser {
             _ => Err("SIMD literal could not fit into any shape".to_string()),
         }
     }
-    fn parse_string_literal(&mut self) -> Result<Literal, String> {
+    fn parse_string_literal(&mut self) -> Result<String, String> {
         if let Token::String(raw) = self.next() {
-            Ok(Literal::String(raw.to_string()))
+            Ok(raw.to_string())
         } else {
             Err("expected string literal".to_string())
         }
