@@ -43,7 +43,7 @@ pub(crate) enum TypeIdentifier {
     Array {
         is_ref: bool,
         element_type: Box<TypeIdentifier>,
-        size: usize,
+        size: u32,
     },
     Function {
         is_ref: bool,
@@ -1214,7 +1214,7 @@ impl Parser {
                     size: if matches!(self.peek(), Token::SemiColon) {
                         self.eat_token(Token::SemiColon)?;
                         if let Token::Number(raw) = self.next() {
-                            raw.parse::<usize>().unwrap()
+                            raw.parse::<u32>().unwrap()
                         } else {
                             return Err("expected number literal in array type".to_string());
                         }

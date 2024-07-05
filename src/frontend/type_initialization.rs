@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::frontend::{
-    mitetype::{FunctionInformation, FunctionTypeInformation, Parameter, StringTypeInformation},
-    parser::FunctionDeclaration,
+    ir::{ast_to_ir, Export}, mitetype::{FunctionInformation, FunctionTypeInformation, Parameter, StringTypeInformation}, parser::{parse, FunctionDeclaration}, tokenizer::tokenize
 };
 
 use super::{
+    ir::Options,
     mitetype::{
         ArrayTypeInformation, PrimitiveTypeInformation, StructField, StructTypeInformation,
         TypeInformation,
@@ -145,7 +145,7 @@ fn struct_declaration_to_type_information(
     struct_type
 }
 
-pub(super) fn build_types(program: &Program) -> HashMap<String, TypeInformation> {
+pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String, TypeInformation> {
     let mut types = HashMap::new();
 
     macro_rules! insert_primitive {
@@ -153,7 +153,7 @@ pub(super) fn build_types(program: &Program) -> HashMap<String, TypeInformation>
             types.insert(
                 $name.to_string(),
                 TypeInformation::Primitive(PrimitiveTypeInformation {
-                    name: $name.to_string(),
+                    name: $name,
                     sizeof: $sizeof,
                 }),
             );
@@ -188,6 +188,35 @@ pub(super) fn build_types(program: &Program) -> HashMap<String, TypeInformation>
         "string".to_string(),
         TypeInformation::String(StringTypeInformation {}),
     );
+
+    // todo: this really needs to be cleaned up to prevent imports being
+    // parsed twice (here and in ast_to_ir)
+    crate::for_each_decl!(program, Import, |decl| {
+        let import_data = (options.resolve_import)(&decl.source);
+
+        if import_data.is_mite {
+            let tokens = tokenize(&import_data.source);
+            let ast = parse(tokens);
+            let imported_module = ast_to_ir(ast, options.clone());
+
+            for specifier in decl.specifiers {
+                let export = imported_module.exports.get(&specifier.imported);
+                if let Some(export) = export {
+                    match export {
+                        Export::Struct(info) => {
+                            types.insert(
+                                specifier.local.clone(),
+                                TypeInformation::Struct(info.clone()),
+                            );
+                        }
+                        _ => {}
+                    }
+                } else {
+                    panic!("Imported symbol {} not found", specifier.imported);
+                }
+            }
+        }
+    });
 
     let (mut types, declarations) = identify_structs(&program, &types);
     // 🤔

@@ -40,6 +40,7 @@ pub(crate) struct IRModule {
     pub functions: Vec<IRFunction>,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) enum IRExpression {
     // same as parser
     Literal {
@@ -124,6 +125,15 @@ pub(crate) enum IRExpression {
     },
     // new
     Void(Box<IRExpression>),
+    LocalGet {
+        ty: TypeInformation,
+        name: String,
+    },
+    LocalSet {
+        ty: TypeInformation,
+        name: String,
+        value: Box<IRExpression>,
+    },
     DirectCall {
         ty: TypeInformation,
         callee: FunctionTypeInformation,
@@ -139,7 +149,7 @@ pub(crate) enum IRExpression {
 impl IRExpression {
     pub fn ty(&self) -> TypeInformation {
         let void = TypeInformation::Primitive(PrimitiveTypeInformation {
-            name: "void".to_string(),
+            name: "void",
             sizeof: 0,
         });
 
@@ -169,8 +179,26 @@ impl IRExpression {
     }
 }
 
+#[macro_export]
+macro_rules! for_each_decl {
+    ($program:expr, $type:ident, $cb:expr) => {
+        $program
+            .body
+            .iter()
+            .filter_map(|decl| match decl {
+                Declaration::$type(decl) => Some(decl.clone()),
+                Declaration::Export(decl) => match *decl.clone() {
+                    Declaration::$type(decl) => Some(decl),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .for_each($cb);
+    };
+}
+
 pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
-    let mut ctx = IRContext::from_program(&program);
+    let mut ctx = IRContext::from_program(&program, options);
 
     let mut module = IRModule {
         imports: HashMap::new(),
@@ -180,24 +208,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         functions: Vec::new(),
     };
 
-    macro_rules! for_each_decl {
-        ($type:ident, $cb:expr) => {
-            program
-                .body
-                .iter()
-                .filter_map(|decl| match decl {
-                    Declaration::$type(decl) => Some(decl.clone()),
-                    Declaration::Export(decl) => match *decl.clone() {
-                        Declaration::$type(decl) => Some(decl),
-                        _ => None,
-                    },
-                    _ => None,
-                })
-                .for_each($cb);
-        };
-    }
-
-    for_each_decl!(Import, |decl| {
+    for_each_decl!(program, Import, |decl| {
         let import_data = (options.resolve_import)(&decl.source);
         module.imports.insert(decl.source.clone(), HashMap::new());
         let imports = module.imports.get_mut(&decl.source).unwrap();
@@ -212,12 +223,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                 if let Some(export) = export {
                     imports.insert(specifier.local, export.clone());
                     match export {
-                        Export::Struct(info) => {
-                            ctx.types.add(
-                                specifier.local.clone(),
-                                TypeInformation::Struct(info.clone()),
-                            );
-                        }
+                        Export::Struct(info) => { /* already inserted to types */ }
                         Export::Function(info) => {
                             ctx.globals.insert(specifier.local.clone(), info);
                         }
@@ -232,13 +238,25 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         }
     });
 
+    for_each_decl!(program, Function, |decl| {
+        ctx.globals
+            .insert(decl.name.clone(), decl.implementation.clone());
+    });
+
+    for (name, ty) in ctx.types.0.iter() {
+        if let TypeInformation::Struct(info) = ty {
+            ctx.globals
+                .insert(name.clone(), TypeInformation::Struct(info.clone()));
+        }
+    }
+
     module
 }
 
 pub(super) struct Stacks {
     continues: Vec<String>,
     breaks: Vec<String>,
-    depth: usize,
+    depth: u32,
 }
 
 pub(super) struct IRContext {
@@ -250,8 +268,8 @@ pub(super) struct IRContext {
 }
 
 impl IRContext {
-    fn from_program(program: &Program) -> Self {
-        let types = Types(build_types(program));
+    fn from_program(program: &Program, options: Options) -> Self {
+        let types = Types(build_types(program, options));
 
         IRContext {
             current_function: FunctionInformation {

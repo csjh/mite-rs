@@ -2,20 +2,25 @@ use std::{collections::HashMap, fmt};
 
 use super::{
     ir::IRExpression,
-    parser::{BinaryOperator, UnaryOperator},
+    parser::{BinaryOperator, Literal, UnaryOperator},
 };
 
 #[derive(Debug, Clone)]
 pub(super) struct PrimitiveTypeInformation {
-    pub name: String,
-    pub sizeof: usize,
+    pub name: &'static str,
+    pub sizeof: u32,
 }
+
+const PTR: PrimitiveTypeInformation = PrimitiveTypeInformation {
+    name: "u32",
+    sizeof: 4,
+};
 
 #[derive(Debug, Clone)]
 pub(super) struct ArrayTypeInformation {
     pub name: String,
     pub element_type: Box<TypeInformation>,
-    pub length: Option<usize>,
+    pub length: Option<u32>,
     pub is_ref: bool,
 }
 
@@ -23,7 +28,7 @@ pub(super) struct ArrayTypeInformation {
 pub(super) struct StructField {
     pub name: String,
     pub ty: TypeInformation,
-    pub offset: usize,
+    pub offset: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -31,7 +36,7 @@ pub(super) struct StructTypeInformation {
     pub name: String,
     pub fields: HashMap<String, StructField>,
     pub methods: HashMap<String, FunctionTypeInformation>,
-    pub sizeof: usize,
+    pub sizeof: u32,
     pub is_ref: bool,
 }
 
@@ -77,7 +82,7 @@ impl TypeInformation {
         }
     }
 
-    pub fn sizeof(&self) -> usize {
+    pub fn sizeof(&self) -> u32 {
         if self.is_ref() {
             return 4;
         } else {
@@ -134,11 +139,11 @@ impl fmt::Display for TypeInformation {
 
 pub(super) trait MiteType {
     // get the value as IR (pointer for structs and arrays, value for locals)
-    fn get(&self) -> &IRExpression {
+    fn get(&self) -> IRExpression {
         panic!("Getting a value on a non-gettable type {}", self.ty());
     }
     // set the value
-    fn set(&mut self, value: &dyn MiteType) -> &IRExpression {
+    fn set(&mut self, value: &dyn MiteType) -> IRExpression {
         panic!("Setting a value on a non-settable type {}", self.ty());
     }
     // access with . operator
@@ -154,7 +159,7 @@ pub(super) trait MiteType {
         panic!("Calling a non-function type {}", self.ty());
     }
     // get the full size of the value
-    fn sizeof(&self) -> &IRExpression {
+    fn sizeof(&self) -> IRExpression {
         panic!("Getting the size of a non-sizeable type {}", self.ty());
     }
     // get handler for unary operator
@@ -201,8 +206,8 @@ pub(super) trait MiteType {
 }
 
 impl MiteType for IRExpression {
-    fn get(&self) -> &IRExpression {
-        self
+    fn get(&self) -> IRExpression {
+        self.clone()
     }
 
     fn ty(&self) -> TypeInformation {
@@ -211,15 +216,42 @@ impl MiteType for IRExpression {
 }
 
 struct LocalPrimitive {
+    ty: PrimitiveTypeInformation,
     var: String,
 }
 
 impl MiteType for LocalPrimitive {
-    fn get(&self) -> &IRExpression {
-        &IRExpression::Variable(self.var.clone())
+    fn get(&self) -> IRExpression {
+        IRExpression::LocalGet {
+            ty: self.ty(),
+            name: self.var.clone(),
+        }
     }
-    
+
+    fn set(&mut self, value: &dyn MiteType) -> IRExpression {
+        IRExpression::LocalSet {
+            ty: self.ty(),
+            name: self.var.clone(),
+            value: Box::new(value.get()),
+        }
+    }
+
+    fn sizeof(&self) -> IRExpression {
+        IRExpression::Literal {
+            ty: PrimitiveTypeInformation {
+                name: "u32",
+                sizeof: 4,
+            },
+            value: Literal::U32(self.ty.sizeof),
+        }
+    }
+
     fn ty(&self) -> TypeInformation {
-        todo!()
+        TypeInformation::Primitive(self.ty.clone())
     }
+}
+
+struct LinearMemoryPrimitive {
+    ty: PrimitiveTypeInformation,
+    ptr: IRExpression,
 }
