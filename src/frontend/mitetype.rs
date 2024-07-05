@@ -1,8 +1,9 @@
 use std::{collections::HashMap, fmt};
 
-use crate::frontend::ir::IRContext;
-
-use super::parser::{BinaryOperator, UnaryOperator};
+use super::{
+    ir::IRExpression,
+    parser::{BinaryOperator, UnaryOperator},
+};
 
 #[derive(Debug, Clone)]
 pub(super) struct PrimitiveTypeInformation {
@@ -82,11 +83,39 @@ impl TypeInformation {
         } else {
             match self {
                 TypeInformation::Primitive(info) => info.sizeof,
-                TypeInformation::Array(info) => info.element_type.sizeof() * info.length.unwrap_or(0),
+                TypeInformation::Array(info) => {
+                    assert!(
+                        info.length.is_some(),
+                        "Array length must be known in non-ref array"
+                    );
+                    info.element_type.sizeof() * info.length.unwrap()
+                }
                 TypeInformation::Struct(info) => info.sizeof,
                 TypeInformation::String(_) => unreachable!(),
                 TypeInformation::Function(_) => 8,
             }
+        }
+    }
+
+    pub fn is_compatible(&self, other: &TypeInformation) -> bool {
+        match (self, other) {
+            (TypeInformation::Primitive(a), TypeInformation::Primitive(b)) => a.name == b.name,
+            (TypeInformation::Array(a), TypeInformation::Array(b)) => {
+                a.element_type.is_compatible(&b.element_type)
+            }
+            (TypeInformation::Struct(a), TypeInformation::Struct(b)) => a.name == b.name,
+            (TypeInformation::String(_), TypeInformation::String(_)) => true,
+            (TypeInformation::Function(a), TypeInformation::Function(b)) => {
+                a.name == b.name
+                    && a.implementation.args.len() == b.implementation.args.len()
+                    && a.implementation
+                        .args
+                        .iter()
+                        .zip(b.implementation.args.iter())
+                        .all(|(a, b)| a.ty.is_compatible(&b.ty))
+                    && a.implementation.ret.is_compatible(&b.implementation.ret)
+            }
+            _ => false,
         }
     }
 }
@@ -104,28 +133,93 @@ impl fmt::Display for TypeInformation {
 }
 
 pub(super) trait MiteType {
-    // get the value as a primitive (pointer for structs and arrays, value for locals)
-    fn get(&self) -> Primitive;
+    // get the value as IR (pointer for structs and arrays, value for locals)
+    fn get(&self) -> &IRExpression {
+        panic!("Getting a value on a non-gettable type {}", self.ty());
+    }
     // set the value
-    fn set(&mut self, value: dyn MiteType);
+    fn set(&mut self, value: &dyn MiteType) -> &IRExpression {
+        panic!("Setting a value on a non-settable type {}", self.ty());
+    }
     // access with . operator
-    fn access(&self, key: String) -> dyn MiteType;
+    fn access(&self, key: String) -> &dyn MiteType {
+        panic!("Accessing field {} on a non-struct type {}", key, self.ty());
+    }
     // access with [] operator
-    fn index(&self, index: dyn MiteType) -> dyn MiteType;
+    fn index(&self, index: &dyn MiteType) -> &dyn MiteType {
+        panic!("Indexing on a non-array type {}", self.ty());
+    }
     // call the value as a function
-    fn call(&self, args: Vec<Box<dyn MiteType>>) -> dyn MiteType;
+    fn call(&self, args: Vec<Box<&dyn MiteType>>) -> &dyn MiteType {
+        panic!("Calling a non-function type {}", self.ty());
+    }
     // get the full size of the value
-    fn sizeof(&self) -> Primitive;
+    fn sizeof(&self) -> &IRExpression {
+        panic!("Getting the size of a non-sizeable type {}", self.ty());
+    }
     // get handler for unary operator
-    fn unary_op(&self, op: UnaryOperator) -> dyn FnOnce() -> dyn MiteType;
+    fn unary_op(&self, op: UnaryOperator) -> Box<dyn FnOnce() -> IRExpression> {
+        panic!(
+            "Unary operator {} not supported on type {}",
+            match op {
+                UnaryOperator::Not => "!",
+                UnaryOperator::Plus => "+",
+                UnaryOperator::Minus => "-",
+                UnaryOperator::BitwiseNot => "~",
+            },
+            self.ty()
+        );
+    }
     // get handler for binary operator
-    fn binary_op(&self, op: BinaryOperator) -> dyn FnOnce(&Primitive) -> dyn MiteType;
+    fn binary_op(&self, op: BinaryOperator) -> Box<dyn FnOnce(&dyn MiteType) -> IRExpression> {
+        panic!(
+            "Binary operator {} not supported on type {}",
+            match op {
+                BinaryOperator::Plus => "+",
+                BinaryOperator::Minus => "-",
+                BinaryOperator::Star => "*",
+                BinaryOperator::Slash => "/",
+                BinaryOperator::Remainder => "%",
+                BinaryOperator::And => "&",
+                BinaryOperator::Or => "|",
+                BinaryOperator::Xor => "^",
+                BinaryOperator::BitshiftLeft => "<<",
+                BinaryOperator::BitshiftRight => ">>",
+                BinaryOperator::Equals => "==",
+                BinaryOperator::NotEquals => "!=",
+                BinaryOperator::LessThan => "<",
+                BinaryOperator::LessThanEquals => "<=",
+                BinaryOperator::GreaterThan => ">",
+                BinaryOperator::GreaterThanEquals => ">=",
+            },
+            self.ty()
+        );
+    }
 
     // get the type information
     fn ty(&self) -> TypeInformation;
 }
 
-pub(super) struct Primitive<'a> {
-    pub ctx: &'a mut IRContext,
-    pub ty: PrimitiveTypeInformation,
+impl MiteType for IRExpression {
+    fn get(&self) -> &IRExpression {
+        self
+    }
+
+    fn ty(&self) -> TypeInformation {
+        self.ty()
+    }
+}
+
+struct LocalPrimitive {
+    var: String,
+}
+
+impl MiteType for LocalPrimitive {
+    fn get(&self) -> &IRExpression {
+        &IRExpression::Variable(self.var.clone())
+    }
+    
+    fn ty(&self) -> TypeInformation {
+        todo!()
+    }
 }
