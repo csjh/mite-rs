@@ -175,6 +175,8 @@ impl IRExpression {
             IRExpression::Empty => void,
             IRExpression::Return { .. } => void,
             IRExpression::Void(_) => void,
+            IRExpression::LocalGet { ty, .. } => ty.clone(),
+            IRExpression::LocalSet { ty, .. } => ty.clone(),
         }
     }
 }
