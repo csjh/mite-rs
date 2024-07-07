@@ -225,10 +225,10 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                     match export {
                         Export::Struct(info) => { /* already inserted to types */ }
                         Export::Function(info) => {
-                            ctx.globals.insert(specifier.local.clone(), info);
+                            ctx.globals.insert(specifier.local.clone(), _);
                         }
                         Export::Variable(info) => {
-                            ctx.globals.insert(specifier.local.clone(), info.clone());
+                            ctx.globals.insert(specifier.local.clone(), _);
                         }
                     }
                 } else {
@@ -239,14 +239,12 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     });
 
     for_each_decl!(program, Function, |decl| {
-        ctx.globals
-            .insert(decl.name.clone(), decl.implementation.clone());
+        ctx.globals.insert(decl.name.clone(), _);
     });
 
     for (name, ty) in ctx.types.0.iter() {
         if let TypeInformation::Struct(info) = ty {
-            ctx.globals
-                .insert(name.clone(), TypeInformation::Struct(info.clone()));
+            ctx.globals.insert(name.clone(), _);
         }
     }
 
