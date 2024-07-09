@@ -244,6 +244,12 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         ctx.globals.insert(decl.name.clone(), _);
     });
 
+    for_each_decl!(program, Variable, |decl| {
+        for var in decl.declarations {
+            ctx.globals.insert(var.id.clone(), _);
+        }
+    });
+
     for (name, ty) in ctx.types.0.iter() {
         if let TypeInformation::Struct(info) = ty {
             ctx.globals.insert(name.clone(), _);
