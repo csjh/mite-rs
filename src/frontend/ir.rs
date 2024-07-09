@@ -210,6 +210,16 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         functions: Vec::new(),
     };
 
+    // order of declaration handling:
+    // 1. imports (only structs, to make sure are available in types)
+    // 2. structs (for types)
+    // 3. imports (functions and variables)
+    // 4. functions (only signatures)
+    // 5. variables (after functions in case they are used in initializers)
+    // 6. functions (implementations)
+    // 7. exports
+    // any duplicate steps could/should be avoided but realistically not that big of a deal
+
     for_each_decl!(program, Import, |decl| {
         let import_data = (options.resolve_import)(&decl.source);
         module.imports.insert(decl.source.clone(), HashMap::new());
