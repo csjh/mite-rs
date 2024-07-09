@@ -250,6 +250,53 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         }
     }
 
+    for_each_decl!(program, Export, |decl| -> () {
+        match *decl {
+            Declaration::Function(decl) => {
+                let ty = FunctionTypeInformation {
+                    name: decl.name.clone(),
+                    implementation: FunctionInformation {
+                        args: decl
+                            .parameters
+                            .iter()
+                            .map(|param| Parameter {
+                                name: param.name.clone(),
+                                ty: ctx.types.parse_type(&param.type_annotation),
+                            })
+                            .collect(),
+                        ret: Box::new(ctx.types.parse_type(&decl.return_type)),
+                    },
+                    is_ref: false,
+                };
+
+                module
+                    .exports
+                    .insert(decl.name.clone(), Export::Function(ty));
+            }
+            Declaration::Variable(decl) => {
+                for var in decl.declarations {
+                    let ty = ctx.types.parse_type(match var.type_annotation {
+                        Some(ty) => &ty,
+                        None => panic!("Global variables must have a type annotation"),
+                    });
+
+                    module.exports.insert(var.id.clone(), Export::Variable(ty));
+                }
+            }
+            Declaration::Struct(decl) => {
+                let ty = match ctx.types.get(&decl.id).unwrap().clone() {
+                    TypeInformation::Struct(info) => info,
+                    _ => unreachable!(),
+                };
+
+                module.exports.insert(decl.id.clone(), Export::Struct(ty));
+            }
+            Declaration::Export(_) | Declaration::Import(_) => {
+                panic!("Invalid export: cannot export exports or imports")
+            }
+        }
+    });
+
     module
 }
 
