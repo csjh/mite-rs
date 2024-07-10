@@ -5,7 +5,7 @@ use super::{
     },
     type_initialization::{build_types, Types},
 };
-use crate::frontend::{parser::*, tokenizer::tokenize};
+use crate::frontend::{mitetype::Parameter, parser::*, tokenizer::tokenize};
 use std::collections::HashMap;
 
 pub struct ResolvedImport {
