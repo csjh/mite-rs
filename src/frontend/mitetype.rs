@@ -205,6 +205,56 @@ pub(super) trait MiteType {
     fn ty(&self) -> TypeInformation;
 }
 
+/* struct IRExpression */
+
+struct LocalPrimitive {
+    ty: PrimitiveTypeInformation,
+    var: String,
+}
+
+struct LinearMemoryPrimitive {
+    ty: PrimitiveTypeInformation,
+    ptr: IRExpression,
+}
+
+struct GlobalPrimitive {
+    ty: PrimitiveTypeInformation,
+    var: String,
+}
+
+struct Pointer {
+    ptr: Box<dyn MiteType>,
+}
+
+struct Struct {
+    ty: StructTypeInformation,
+    ptr: Pointer,
+}
+
+struct Array {
+    ty: ArrayTypeInformation,
+    ptr: Pointer,
+}
+
+struct DirectFunction {
+    ty: FunctionTypeInformation,
+}
+
+struct IndirectFunction {
+    ty: FunctionTypeInformation,
+    ptr: Pointer,
+}
+
+struct StructMethod {
+    ty: FunctionTypeInformation,
+    ptr: Struct,
+}
+
+struct String_ {
+    ty: StringTypeInformation,
+    ptr: Pointer,
+}
+
 impl MiteType for IRExpression {
     fn get(&self) -> IRExpression {
         self.clone()
@@ -213,11 +263,6 @@ impl MiteType for IRExpression {
     fn ty(&self) -> TypeInformation {
         self.ty()
     }
-}
-
-struct LocalPrimitive {
-    ty: PrimitiveTypeInformation,
-    var: String,
 }
 
 impl MiteType for LocalPrimitive {
@@ -251,7 +296,59 @@ impl MiteType for LocalPrimitive {
     }
 }
 
-struct LinearMemoryPrimitive {
-    ty: PrimitiveTypeInformation,
-    ptr: IRExpression,
+impl MiteType for LinearMemoryPrimitive {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Primitive(self.ty.clone())
+    }
+}
+
+impl MiteType for GlobalPrimitive {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Primitive(self.ty.clone())
+    }
+}
+
+impl MiteType for Pointer {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Primitive(PrimitiveTypeInformation {
+            name: "u32",
+            sizeof: 4,
+        })
+    }
+}
+
+impl MiteType for Struct {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Struct(self.ty.clone())
+    }
+}
+
+impl MiteType for Array {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Array(self.ty.clone())
+    }
+}
+
+impl MiteType for DirectFunction {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Function(self.ty.clone())
+    }
+}
+
+impl MiteType for IndirectFunction {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Function(self.ty.clone())
+    }
+}
+
+impl MiteType for StructMethod {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::Function(self.ty.clone())
+    }
+}
+
+impl MiteType for String_ {
+    fn ty(&self) -> TypeInformation {
+        TypeInformation::String(self.ty.clone())
+    }
 }
