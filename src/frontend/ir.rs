@@ -1,11 +1,11 @@
 use super::{
     mitetype::{
-        ArrayTypeInformation, FunctionInformation, FunctionTypeInformation, MiteType,
-        PrimitiveTypeInformation, StructTypeInformation, TypeInformation,
+        ArrayTypeInformation, DirectFunction, FunctionInformation, FunctionTypeInformation,
+        MiteType, PrimitiveTypeInformation, StructTypeInformation, TypeInformation,
     },
     type_initialization::{build_types, Types},
 };
-use crate::frontend::{mitetype::Parameter, parser::*, tokenizer::tokenize};
+use crate::frontend::{parser::*, tokenizer::tokenize};
 use std::collections::HashMap;
 
 pub struct ResolvedImport {
@@ -269,25 +269,10 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     for_each_decl!(program, Export, |decl| -> () {
         match *decl {
             Declaration::Function(decl) => {
-                let ty = FunctionTypeInformation {
-                    name: decl.name.clone(),
-                    implementation: FunctionInformation {
-                        args: decl
-                            .parameters
-                            .iter()
-                            .map(|param| Parameter {
-                                name: param.name.clone(),
-                                ty: ctx.types.parse_type(&param.type_annotation),
-                            })
-                            .collect(),
-                        ret: Box::new(ctx.types.parse_type(&decl.return_type)),
-                    },
-                    is_ref: false,
-                };
-
-                module
-                    .exports
-                    .insert(decl.name.clone(), Export::Function(ty));
+                module.exports.insert(
+                    decl.name.clone(),
+                    Export::Function(decl.to_type(&ctx.types)),
+                );
             }
             Declaration::Variable(decl) => {
                 for var in decl.declarations {

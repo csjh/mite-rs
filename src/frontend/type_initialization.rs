@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::frontend::{
-    ir::{ast_to_ir, Export}, mitetype::{FunctionInformation, FunctionTypeInformation, Parameter, StringTypeInformation}, parser::{parse, FunctionDeclaration}, tokenizer::tokenize
+    ir::{ast_to_ir, Export},
+    mitetype::{FunctionInformation, FunctionTypeInformation, Parameter, StringTypeInformation},
+    parser::parse,
+    tokenizer::tokenize,
 };
 
 use super::{
@@ -223,34 +226,15 @@ pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String
     let typeser = Types(types.clone());
 
     for StructDeclaration { id, methods, .. } in declarations {
-        for FunctionDeclaration {
-            name,
-            parameters,
-            return_type,
-            ..
-        } in methods
-        {
+        for decl in methods {
             let struct_type = match types.get_mut(id).unwrap() {
                 TypeInformation::Struct(info) => info,
                 _ => unreachable!(),
             };
 
-            let func = FunctionTypeInformation {
-                name: name.clone(),
-                implementation: FunctionInformation {
-                    args: parameters
-                        .iter()
-                        .map(|param| Parameter {
-                            name: param.name.clone(),
-                            ty: typeser.parse_type(&param.type_annotation),
-                        })
-                        .collect::<Vec<Parameter>>(),
-                    ret: Box::new(typeser.parse_type(return_type)),
-                },
-                is_ref: false,
-            };
-
-            struct_type.methods.insert(name.clone(), func);
+            struct_type
+                .methods
+                .insert(decl.name.clone(), decl.to_type(&typeser));
         }
     }
 
@@ -296,10 +280,7 @@ impl Types {
             } => {
                 let args = parameters
                     .iter()
-                    .map(|param| Parameter {
-                        name: param.name.clone(),
-                        ty: self.parse_type(&param.type_annotation),
-                    })
+                    .map(|param| param.to_parameter(&self))
                     .collect::<Vec<Parameter>>();
                 let ret = Box::new(self.parse_type(return_type));
 
@@ -312,11 +293,9 @@ impl Types {
                     ret.to_string()
                 );
 
-                let implementation = FunctionInformation { args, ret };
-
                 TypeInformation::Function(FunctionTypeInformation {
                     name,
-                    implementation,
+                    implementation: FunctionInformation { args, ret },
                     is_ref: *is_ref,
                 })
             }

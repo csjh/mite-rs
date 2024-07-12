@@ -46,6 +46,15 @@ pub(super) struct Parameter {
     pub ty: TypeInformation,
 }
 
+impl TypedParameter {
+    pub fn to_parameter(&self, types: &Types) -> Parameter {
+        Parameter {
+            name: self.name.clone(),
+            ty: types.parse_type(&self.type_annotation),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct FunctionInformation {
     pub args: Vec<Parameter>,
@@ -57,6 +66,23 @@ pub(super) struct FunctionTypeInformation {
     pub name: String,
     pub implementation: FunctionInformation,
     pub is_ref: bool,
+}
+
+impl FunctionDeclaration {
+    pub fn to_type(&self, types: &Types) -> FunctionTypeInformation {
+        FunctionTypeInformation {
+            name: self.name.clone(),
+            implementation: FunctionInformation {
+                args: self
+                    .parameters
+                    .iter()
+                    .map(|param| param.to_parameter(types))
+                    .collect(),
+                ret: Box::new(types.parse_type(&self.return_type)),
+            },
+            is_ref: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
