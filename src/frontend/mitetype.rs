@@ -238,6 +238,7 @@ struct Array {
 
 struct DirectFunction {
     ty: FunctionTypeInformation,
+    name: String,
 }
 
 struct IndirectFunction {
