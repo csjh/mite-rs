@@ -268,7 +268,13 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
 
     for (name, ty) in ctx.types.0.iter() {
         if let TypeInformation::Struct(info) = ty {
-            ctx.globals.insert(name.clone(), _);
+            for (name, ty) in info.methods {
+                // TODO: this shouldn't be necessary
+                ctx.globals.insert(
+                    format!("{}.{}", info.name, name),
+                    Box::new(DirectFunction::new(ty, format!("{}.{}", info.name, name))),
+                );
+            }
         }
     }
 
