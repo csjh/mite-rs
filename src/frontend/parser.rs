@@ -209,78 +209,126 @@ pub(crate) enum LogicalOperator {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+struct Block {
+    body: Vec<Statement>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct While {
+    test: Box<Expression>,
+    body: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct DoWhile {
+    test: Box<Expression>,
+    body: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct For {
+    init: Option<Box<Statement>>,
+    test: Option<Box<Expression>>,
+    update: Option<Box<Expression>>,
+    body: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Array {
+    elements: Vec<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Object {
+    type_annotation: TypeIdentifier,
+    properties: Vec<Property>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Sequence {
+    expressions: Vec<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Unary {
+    operator: UnaryOperator,
+    argument: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Binary {
+    operator: BinaryOperator,
+    left: Box<Expression>,
+    right: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Assignment {
+    operator: AssignmentOperator,
+    left: Box<Expression>,
+    right: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Logical {
+    operator: LogicalOperator,
+    left: Box<Expression>,
+    right: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct If {
+    test: Box<Expression>,
+    consequent: Box<Expression>,
+    alternate: Option<Box<Expression>>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Call {
+    callee: Box<Expression>,
+    arguments: Vec<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Member {
+    object: Box<Expression>,
+    property: Identifier,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Index {
+    object: Box<Expression>,
+    index: Box<Expression>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Return {
+    argument: Option<Box<Expression>>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Expression {
     Identifier(Identifier),
     Literal(Literal),
-    Block {
-        body: Vec<Statement>,
-    },
+    Block(Block),
     Break,
     Continue,
-    While {
-        test: Box<Expression>,
-        body: Box<Expression>,
-    },
-    DoWhile {
-        test: Box<Expression>,
-        body: Box<Expression>,
-    },
-    For {
-        init: Option<Box<Statement>>,
-        test: Option<Box<Expression>>,
-        update: Option<Box<Expression>>,
-        body: Box<Expression>,
-    },
+    While(While),
+    DoWhile(DoWhile),
+    For(For),
     Empty,
-    Array {
-        elements: Vec<Expression>,
-    },
-    Object {
-        type_annotation: TypeIdentifier,
-        properties: Vec<Property>,
-    },
-    Sequence {
-        expressions: Vec<Expression>,
-    },
-    Unary {
-        operator: UnaryOperator,
-        argument: Box<Expression>,
-    },
-    Binary {
-        operator: BinaryOperator,
-        left: Box<Expression>,
-        right: Box<Expression>,
-    },
-    Assignment {
-        operator: AssignmentOperator,
-        left: Box<Expression>,
-        right: Box<Expression>,
-    },
-    Logical {
-        operator: LogicalOperator,
-        left: Box<Expression>,
-        right: Box<Expression>,
-    },
-    If {
-        test: Box<Expression>,
-        consequent: Box<Expression>,
-        alternate: Option<Box<Expression>>,
-    },
-    Call {
-        callee: Box<Expression>,
-        arguments: Vec<Expression>,
-    },
-    Member {
-        object: Box<Expression>,
-        property: Identifier,
-    },
-    Index {
-        object: Box<Expression>,
-        index: Box<Expression>,
-    },
-    Return {
-        argument: Option<Box<Expression>>,
-    },
+    Array(Array),
+    Object(Object),
+    Sequence(Sequence),
+    Unary(Unary),
+    Binary(Binary),
+    Assignment(Assignment),
+    Logical(Logical),
+    If(If),
+    Call(Call),
+    Member(Member),
+    Index(Index),
+    Return(Return),
 }
 
 pub fn parse(tokens: Vec<Token>) -> Program {
@@ -566,9 +614,9 @@ impl Parser {
 
         if matches!(self.peek(), Token::Let | Token::Const) {
             self.index -= 1;
-            return Ok(Expression::Block {
+            return Ok(Expression::Block(Block {
                 body: vec![self.parse_statement()?],
-            });
+            }));
         }
 
         loop {
@@ -752,11 +800,11 @@ impl Parser {
             None
         };
 
-        Ok(Expression::If {
+        Ok(Expression::If(If {
             test: Box::new(test),
             consequent: Box::new(consequent),
             alternate,
-        })
+        }))
     }
     fn parse_for_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::For)?;
@@ -792,12 +840,12 @@ impl Parser {
 
         let body = Box::new(self.parse_expression()?);
 
-        Ok(Expression::For {
+        Ok(Expression::For(For {
             init,
             test,
             update,
             body,
-        })
+        }))
     }
     fn parse_do_while_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::Do)?;
@@ -811,7 +859,7 @@ impl Parser {
 
         self.eat_token(Token::RightParen)?;
 
-        Ok(Expression::DoWhile { test, body })
+        Ok(Expression::DoWhile(DoWhile { test, body }))
     }
     fn parse_while_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::While)?;
@@ -823,7 +871,7 @@ impl Parser {
 
         let body = Box::new(self.parse_expression()?);
 
-        Ok(Expression::While { test, body })
+        Ok(Expression::While(While { test, body }))
     }
     fn parse_sequence_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::LeftBrace)?;
@@ -841,7 +889,7 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(Expression::Sequence { expressions })
+        Ok(Expression::Sequence(Sequence { expressions }))
     }
     fn parse_block_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::LeftBrace)?;
@@ -856,7 +904,7 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(Expression::Block { body })
+        Ok(Expression::Block(Block { body }))
     }
     fn parse_identifier(&mut self) -> Result<String, String> {
         match self.next() {
@@ -1017,10 +1065,10 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(Expression::Object {
+        Ok(Expression::Object(Object {
             type_annotation,
             properties,
-        })
+        }))
     }
     fn parse_array_literal(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::LeftBracket)?;
@@ -1042,7 +1090,7 @@ impl Parser {
 
         self.eat_token(Token::RightBracket)?;
 
-        Ok(Expression::Array { elements })
+        Ok(Expression::Array(Array { elements }))
     }
     fn parse_call_expression(&mut self, caller: Expression) -> Result<Expression, String> {
         self.eat_token(Token::LeftParen)?;
@@ -1064,10 +1112,10 @@ impl Parser {
 
         self.eat_token(Token::RightParen)?;
 
-        Ok(Expression::Call {
+        Ok(Expression::Call(Call {
             callee: Box::new(caller),
             arguments,
-        })
+        }))
     }
     fn parse_member_expression(&mut self, parent: Expression) -> Result<Expression, String> {
         let mut parent = parent;
@@ -1078,10 +1126,10 @@ impl Parser {
 
             let property = self.parse_identifier()?;
 
-            parent = Expression::Member {
+            parent = Expression::Member(Member {
                 object: Box::new(parent),
                 property,
-            };
+            });
 
             if !matches!(self.peek(), Token::Period) {
                 break;
@@ -1100,10 +1148,10 @@ impl Parser {
 
             self.eat_token(Token::RightBracket)?;
 
-            parent = Expression::Index {
+            parent = Expression::Index(Index {
                 object: Box::new(parent),
                 index: Box::new(index),
-            };
+            });
 
             if !matches!(self.peek(), Token::LeftBracket) {
                 break;
@@ -1134,7 +1182,7 @@ impl Parser {
 
         let argument = Box::new(self.parse_expression()?);
 
-        Ok(Expression::Unary {
+        Ok(Expression::Unary(Unary {
             operator: match operator {
                 Token::Not => UnaryOperator::Not,
                 Token::BitwiseNot => UnaryOperator::BitwiseNot,
@@ -1143,7 +1191,7 @@ impl Parser {
                 _ => unreachable!(),
             },
             argument,
-        })
+        }))
     }
 
     fn parse_type(&mut self) -> Result<TypeIdentifier, String> {
@@ -1239,7 +1287,7 @@ impl Parser {
             Some(Box::new(self.parse_expression()?))
         };
 
-        Ok(Expression::Return { argument })
+        Ok(Expression::Return(Return { argument }))
     }
 
     fn construct_binary_expression(
@@ -1259,7 +1307,7 @@ impl Parser {
             | Token::AssignmentSlash
             | Token::AssignmentBitwiseAnd
             | Token::AssignmentBitwiseOr
-            | Token::AssignmentBitwiseXor => Ok(Expression::Assignment {
+            | Token::AssignmentBitwiseXor => Ok(Expression::Assignment(Assignment {
                 operator: match operator {
                     Token::Assignment => AssignmentOperator::Base,
                     Token::AssignmentPlus => AssignmentOperator::Plus,
@@ -1276,7 +1324,7 @@ impl Parser {
                 },
                 left: Box::new(left),
                 right: Box::new(right),
-            }),
+            })),
             Token::Plus
             | Token::Minus
             | Token::Star
@@ -1292,7 +1340,7 @@ impl Parser {
             | Token::BitwiseOr
             | Token::BitwiseXor
             | Token::BitshiftLeft
-            | Token::BitshiftRight => Ok(Expression::Binary {
+            | Token::BitshiftRight => Ok(Expression::Binary(Binary {
                 operator: match operator {
                     Token::Equals => BinaryOperator::Equals,
                     Token::NotEquals => BinaryOperator::NotEquals,
@@ -1314,8 +1362,8 @@ impl Parser {
                 },
                 left: Box::new(left),
                 right: Box::new(right),
-            }),
-            Token::LogicalAnd | Token::LogicalOr => Ok(Expression::Logical {
+            })),
+            Token::LogicalAnd | Token::LogicalOr => Ok(Expression::Logical(Logical {
                 operator: match operator {
                     Token::LogicalAnd => LogicalOperator::And,
                     Token::LogicalOr => LogicalOperator::Or,
@@ -1323,7 +1371,7 @@ impl Parser {
                 },
                 left: Box::new(left),
                 right: Box::new(right),
-            }),
+            })),
             token => Err(format!(
                 "unexpected token in binary expression: {:?}",
                 token
