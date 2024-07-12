@@ -251,7 +251,13 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     });
 
     for_each_decl!(program, Function, |decl| {
-        ctx.globals.insert(decl.name.clone(), _);
+        ctx.globals.insert(
+            decl.name.clone(),
+            Box::new(DirectFunction::new(
+                decl.to_type(&ctx.types),
+                decl.name.clone(),
+            )),
+        );
     });
 
     for_each_decl!(program, Variable, |decl| {
