@@ -20,7 +20,7 @@ pub struct Options {
 
 pub struct IRFunction {
     pub name: String,
-    pub implementation: FunctionInformation,
+    pub ty: FunctionTypeInformation,
     pub locals: HashMap<String, TypeInformation>,
     pub body: IRExpression,
 }
@@ -266,6 +266,23 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         }
     });
 
+    for_each_decl!(program, Function, |decl| {
+        ctx.locals = HashMap::new();
+
+        let body = ctx.to_ir(&decl.body);
+
+        module.functions.push(IRFunction {
+            name: decl.name.clone(),
+            ty: decl.to_type(&ctx.types),
+            locals: ctx
+                .locals
+                .iter()
+                .map(|(k, v)| (k.clone(), v.ty()))
+                .collect(),
+            body,
+        });
+    });
+
     for_each_decl!(program, Export, |decl| -> () {
         match *decl {
             Declaration::Function(decl) => {
@@ -332,6 +349,12 @@ impl IRContext {
             },
             locals: HashMap::new(),
             globals: HashMap::new(),
+        }
+    }
+
+    fn to_ir(&mut self, expr: &Expression) -> IRExpression {
+        match expr {
+            Expression::Identifier()
         }
     }
 }
