@@ -2,7 +2,8 @@ use std::{collections::HashMap, fmt};
 
 use super::{
     ir::IRExpression,
-    parser::{BinaryOperator, Literal, UnaryOperator},
+    parser::{BinaryOperator, FunctionDeclaration, Literal, TypedParameter, UnaryOperator},
+    type_initialization::Types,
 };
 
 #[derive(Debug, Clone)]
@@ -233,53 +234,113 @@ pub(super) trait MiteType {
 
 /* struct IRExpression */
 
-struct LocalPrimitive {
+pub struct LocalPrimitive {
     ty: PrimitiveTypeInformation,
     var: String,
 }
 
-struct LinearMemoryPrimitive {
+impl LocalPrimitive {
+    pub fn new(ty: PrimitiveTypeInformation, var: String) -> Self {
+        LocalPrimitive { ty, var }
+    }
+}
+
+pub struct LinearMemoryPrimitive {
     ty: PrimitiveTypeInformation,
     ptr: IRExpression,
 }
 
-struct GlobalPrimitive {
+impl LinearMemoryPrimitive {
+    pub fn new(ty: PrimitiveTypeInformation, ptr: IRExpression) -> Self {
+        LinearMemoryPrimitive { ty, ptr }
+    }
+}
+
+pub struct GlobalPrimitive {
     ty: PrimitiveTypeInformation,
     var: String,
 }
 
-struct Pointer {
+impl GlobalPrimitive {
+    pub fn new(ty: PrimitiveTypeInformation, var: String) -> Self {
+        GlobalPrimitive { ty, var }
+    }
+}
+
+pub struct Pointer {
     ptr: Box<dyn MiteType>,
 }
 
-struct Struct {
+impl Pointer {
+    pub fn new(ptr: Box<dyn MiteType>) -> Self {
+        Pointer { ptr }
+    }
+}
+
+pub struct Struct {
     ty: StructTypeInformation,
     ptr: Pointer,
 }
 
-struct Array {
+impl Struct {
+    pub fn new(ty: StructTypeInformation, ptr: Pointer) -> Self {
+        Struct { ty, ptr }
+    }
+}
+
+pub struct Array {
     ty: ArrayTypeInformation,
     ptr: Pointer,
 }
 
-struct DirectFunction {
+impl Array {
+    pub fn new(ty: ArrayTypeInformation, ptr: Pointer) -> Self {
+        Array { ty, ptr }
+    }
+}
+
+pub struct DirectFunction {
     ty: FunctionTypeInformation,
     name: String,
 }
 
-struct IndirectFunction {
+impl DirectFunction {
+    pub fn new(ty: FunctionTypeInformation, name: String) -> Self {
+        DirectFunction { ty, name }
+    }
+}
+
+pub struct IndirectFunction {
     ty: FunctionTypeInformation,
     ptr: Pointer,
 }
 
-struct StructMethod {
+impl IndirectFunction {
+    pub fn new(ty: FunctionTypeInformation, ptr: Pointer) -> Self {
+        IndirectFunction { ty, ptr }
+    }
+}
+
+pub struct StructMethod {
     ty: FunctionTypeInformation,
     ptr: Struct,
 }
 
-struct String_ {
+impl StructMethod {
+    pub fn new(ty: FunctionTypeInformation, ptr: Struct) -> Self {
+        StructMethod { ty, ptr }
+    }
+}
+
+pub struct String_ {
     ty: StringTypeInformation,
     ptr: Pointer,
+}
+
+impl String_ {
+    pub fn new(ty: StringTypeInformation, ptr: Pointer) -> Self {
+        String_ { ty, ptr }
+    }
 }
 
 impl MiteType for IRExpression {
