@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fmt};
 
 use super::{
-    ir::IRExpression,
-    parser::{BinaryOperator, FunctionDeclaration, Literal, TypedParameter, UnaryOperator},
+    ir::{IRExpression, Literal, LocalGet, LocalSet},
+    parser::{BinaryOperator, FunctionDeclaration, TypedParameter, UnaryOperator},
     type_initialization::Types,
 };
 
@@ -358,28 +358,28 @@ impl MiteType for IRExpression {
 
 impl MiteType for LocalPrimitive {
     fn get(&self) -> IRExpression {
-        IRExpression::LocalGet {
+        IRExpression::LocalGet(LocalGet {
             ty: self.ty(),
             name: self.var.clone(),
-        }
+        })
     }
 
     fn set(&mut self, value: &dyn MiteType) -> IRExpression {
-        IRExpression::LocalSet {
+        IRExpression::LocalSet(LocalSet {
             ty: self.ty(),
             name: self.var.clone(),
             value: Box::new(value.get()),
-        }
+        })
     }
 
     fn sizeof(&self) -> IRExpression {
-        IRExpression::Literal {
+        IRExpression::Literal(Literal {
             ty: PrimitiveTypeInformation {
                 name: "u32",
                 sizeof: 4,
             },
-            value: Literal::U32(self.ty.sizeof),
-        }
+            value: super::parser::Literal::U32(self.ty.sizeof),
+        })
     }
 
     fn ty(&self) -> TypeInformation {
