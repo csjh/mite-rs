@@ -171,6 +171,7 @@ pub(super) trait MiteType {
     }
     // set the value
     fn set(&mut self, value: &dyn MiteType) -> IRExpression {
+        value;
         panic!("Setting a value on a non-settable type {}", self.ty());
     }
     // access with . operator
@@ -179,10 +180,12 @@ pub(super) trait MiteType {
     }
     // access with [] operator
     fn index(&self, index: &dyn MiteType) -> &dyn MiteType {
+        index;
         panic!("Indexing on a non-array type {}", self.ty());
     }
     // call the value as a function
     fn call(&self, args: Vec<Box<&dyn MiteType>>) -> &dyn MiteType {
+        args;
         panic!("Calling a non-function type {}", self.ty());
     }
     // get the full size of the value
