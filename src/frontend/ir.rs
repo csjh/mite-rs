@@ -42,150 +42,150 @@ pub(crate) struct IRModule {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Literal {
-    ty: PrimitiveTypeInformation,
+    pub ty: PrimitiveTypeInformation,
     value: super::parser::Literal,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Block {
-    ty: TypeInformation,
-    body: Vec<IRExpression>,
+    pub ty: TypeInformation,
+    pub body: Vec<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct While {
-    test: Box<IRExpression>,
-    body: Box<IRExpression>,
+    pub test: Box<IRExpression>,
+    pub body: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct DoWhile {
-    body: Box<IRExpression>,
-    test: Box<IRExpression>,
+    pub body: Box<IRExpression>,
+    pub test: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct For {
-    init: Option<Box<IRExpression>>,
-    test: Option<Box<IRExpression>>,
-    update: Option<Box<IRExpression>>,
-    body: Box<IRExpression>,
+    pub init: Option<Box<IRExpression>>,
+    pub test: Option<Box<IRExpression>>,
+    pub update: Option<Box<IRExpression>>,
+    pub body: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Array {
-    ty: ArrayTypeInformation,
-    elements: Vec<IRExpression>,
+    pub ty: ArrayTypeInformation,
+    pub elements: Vec<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Property {
-    name: String,
-    value: IRExpression,
+    pub name: String,
+    pub value: IRExpression,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Object {
-    ty: StructTypeInformation,
-    properties: Vec<Property>,
+    pub ty: StructTypeInformation,
+    pub properties: Vec<Property>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Unary {
-    ty: TypeInformation,
-    operator: UnaryOperator,
-    operand: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub operator: UnaryOperator,
+    pub operand: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Binary {
-    ty: TypeInformation,
-    operator: BinaryOperator,
-    left: Box<IRExpression>,
-    right: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub operator: BinaryOperator,
+    pub left: Box<IRExpression>,
+    pub right: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Assignment {
-    ty: TypeInformation,
-    operator: AssignmentOperator,
-    left: Box<IRExpression>,
-    right: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub operator: AssignmentOperator,
+    pub left: Box<IRExpression>,
+    pub right: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Logical {
-    ty: TypeInformation,
-    operator: LogicalOperator,
-    left: Box<IRExpression>,
-    right: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub operator: LogicalOperator,
+    pub left: Box<IRExpression>,
+    pub right: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct If {
-    ty: TypeInformation,
-    test: Box<IRExpression>,
-    consequent: Box<IRExpression>,
-    alternate: Option<Box<IRExpression>>,
+    pub ty: TypeInformation,
+    pub test: Box<IRExpression>,
+    pub consequent: Box<IRExpression>,
+    pub alternate: Option<Box<IRExpression>>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Member {
-    ty: TypeInformation,
-    object: Box<IRExpression>,
-    property: String,
+    pub ty: TypeInformation,
+    pub object: Box<IRExpression>,
+    pub property: String,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Index {
-    ty: TypeInformation,
-    object: Box<IRExpression>,
-    index: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub object: Box<IRExpression>,
+    pub index: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Return {
-    value: Box<IRExpression>,
+    pub value: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct LocalGet {
-    ty: TypeInformation,
-    name: String,
+    pub ty: TypeInformation,
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct LocalSet {
-    ty: TypeInformation,
-    name: String,
-    value: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub name: String,
+    pub value: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct GlobalGet {
-    ty: TypeInformation,
-    name: String,
+    pub ty: TypeInformation,
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct GlobalSet {
-    ty: TypeInformation,
-    name: String,
-    value: Box<IRExpression>,
+    pub ty: TypeInformation,
+    pub name: String,
+    pub value: Box<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct DirectCall {
-    ty: TypeInformation,
-    callee: FunctionTypeInformation,
-    arguments: Vec<IRExpression>,
+    pub ty: TypeInformation,
+    pub callee: FunctionTypeInformation,
+    pub arguments: Vec<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct IndirectCall {
-    ty: TypeInformation,
-    callee: Box<IRExpression>,
-    arguments: Vec<IRExpression>,
+    pub ty: TypeInformation,
+    pub callee: Box<IRExpression>,
+    pub arguments: Vec<IRExpression>,
 }
 
 #[derive(Debug, Clone)]
@@ -203,8 +203,8 @@ pub(crate) enum IRExpression {
     Object(Object),
     // this is turned into a block
     // Sequence {
-    //     ty: TypeInformation,
-    //     expressions: Vec<IRExpression>,
+    //     pub ty: TypeInformation,
+    //     pub expressions: Vec<IRExpression>,
     // },
     Unary(Unary),
     Binary(Binary),
@@ -402,17 +402,17 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
 }
 
 pub(super) struct Stacks {
-    continues: Vec<String>,
-    breaks: Vec<String>,
-    depth: u32,
+    pub continues: Vec<String>,
+    pub breaks: Vec<String>,
+    pub depth: u32,
 }
 
 pub(super) struct IRContext {
-    types: Types,
-    stacks: Stacks,
-    locals: HashMap<String, Box<dyn MiteType>>,
-    globals: HashMap<String, Box<dyn MiteType>>,
-    current_function: FunctionInformation,
+    pub types: Types,
+    pub stacks: Stacks,
+    pub locals: HashMap<String, Box<dyn MiteType>>,
+    pub globals: HashMap<String, Box<dyn MiteType>>,
+    pub current_function: FunctionInformation,
 }
 
 impl IRContext {
