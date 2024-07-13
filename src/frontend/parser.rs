@@ -146,11 +146,10 @@ pub(crate) struct ImportDeclaration {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Declaration {
-    Function(FunctionDeclaration),
-    Variable(VariableDeclaration),
-    Struct(StructDeclaration),
-    Export(Box<Declaration>),
-    Import(ImportDeclaration),
+    Function(FunctionDeclaration, bool),
+    Variable(VariableDeclaration, bool),
+    Struct(StructDeclaration, bool),
+    Import(ImportDeclaration, bool),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -376,14 +375,14 @@ impl Parser {
 
     fn parse_top_level_declaration(&mut self) -> Result<Declaration, String> {
         match self.peek() {
-            Token::Fn => Ok(Declaration::Function(self.parse_function(false)?)),
+            Token::Fn => Ok(Declaration::Function(self.parse_function(false)?, false)),
             Token::Struct => self.parse_struct(),
             Token::Export => self.parse_export(),
             Token::Import => self.parse_import(),
             Token::Let | Token::Const => {
                 let decl = self.parse_variable_declaration()?;
                 self.eat_token(Token::SemiColon)?;
-                Ok(Declaration::Variable(decl))
+                Ok(Declaration::Variable(decl, false))
             }
             token => Err(format!("unexpected token at top level: {:?}", token)),
         }
@@ -430,20 +429,20 @@ impl Parser {
 
         self.eat_token(Token::SemiColon)?;
 
-        Ok(Declaration::Import(ImportDeclaration {
-            source,
-            specifiers,
-        }))
+        Ok(Declaration::Import(
+            ImportDeclaration { source, specifiers },
+            false,
+        ))
     }
     fn parse_export(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::EOF)?;
 
-        match self.parse_top_level_declaration()? {
-            Declaration::Export(_) | Declaration::Import { .. } => {
-                Err("export/import cannot be nested".to_string())
-            }
-            decl => Ok(Declaration::Export(Box::new(decl))),
-        }
+        Ok(match self.parse_top_level_declaration()? {
+            Declaration::Function(f, _) => Declaration::Function(f, true),
+            Declaration::Variable(v, _) => Declaration::Variable(v, true),
+            Declaration::Struct(s, _) => Declaration::Struct(s, true),
+            Declaration::Import(_, _) => panic!("cannot export import"),
+        })
     }
     fn parse_struct(&mut self) -> Result<Declaration, String> {
         self.eat_token(Token::Struct)?;
@@ -491,11 +490,14 @@ impl Parser {
 
         self.eat_token(Token::RightBrace)?;
 
-        Ok(Declaration::Struct(StructDeclaration {
-            id,
-            fields,
-            methods,
-        }))
+        Ok(Declaration::Struct(
+            StructDeclaration {
+                id,
+                fields,
+                methods,
+            },
+            false,
+        ))
     }
     fn parse_function(&mut self, is_method: bool) -> Result<FunctionDeclaration, String> {
         if !is_method {

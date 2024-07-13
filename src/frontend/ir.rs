@@ -268,11 +268,7 @@ macro_rules! for_each_decl {
             .body
             .iter()
             .filter_map(|decl| match decl {
-                Declaration::$type(decl) => Some(decl.clone()),
-                Declaration::Export(decl) => match *decl.clone() {
-                    Declaration::$type(decl) => Some(decl),
-                    _ => None,
-                },
+                Declaration::$type(decl, exported) => Some((decl.clone(), *exported)),
                 _ => None,
             })
             .for_each($cb);
@@ -293,14 +289,18 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     // order of declaration handling:
     // 1. imports (only structs, to make sure are available in types)
     // 2. structs (for types)
+    // ---- we are here ----
     // 3. imports (functions and variables)
     // 4. functions (only signatures)
     // 5. variables (after functions in case they are used in initializers)
     // 6. functions (implementations)
-    // 7. exports
     // any duplicate steps could/should be avoided but realistically not that big of a deal
 
-    for_each_decl!(program, Import, |decl| {
+    for_each_decl!(program, Import, |(decl, exported)| {
+        if exported {
+            panic!("Cannot export imports");
+        }
+
         let import_data = (options.resolve_import)(&decl.source);
         module.imports.insert(decl.source.clone(), HashMap::new());
         let imports = module.imports.get_mut(&decl.source).unwrap();
@@ -333,23 +333,32 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         }
     });
 
-    for_each_decl!(program, Function, |decl| {
+    for_each_decl!(program, Function, |(decl, exported)| {
+        let ty = decl.to_type(&ctx.types);
+
         ctx.globals.insert(
             decl.name.clone(),
-            Box::new(DirectFunction::new(
-                decl.to_type(&ctx.types),
-                decl.name.clone(),
-            )),
+            Box::new(DirectFunction::new(ty, decl.name.clone())),
         );
-    });
 
-    for_each_decl!(program, Variable, |decl| {
-        for var in decl.declarations {
-            ctx.globals.insert(var.id.clone(), _);
+        if exported {
+            module
+                .exports
+                .insert(decl.name.clone(), Export::Function(ty));
         }
     });
 
-    for_each_decl!(program, Function, |decl| {
+    for_each_decl!(program, Variable, |(decl, exported)| {
+        for var in decl.declarations {
+            ctx.globals.insert(var.id.clone(), _);
+
+            if exported {
+                module.exports.insert(var.id.clone(), Export::Variable(_));
+            }
+        }
+    });
+
+    for_each_decl!(program, Function, |(decl, exported)| {
         ctx.locals = HashMap::new();
 
         let body = ctx.to_ir(&decl.body);
@@ -364,37 +373,12 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                 .collect(),
             body,
         });
-    });
 
-    for_each_decl!(program, Export, |decl| -> () {
-        match *decl {
-            Declaration::Function(decl) => {
-                module.exports.insert(
-                    decl.name.clone(),
-                    Export::Function(decl.to_type(&ctx.types)),
-                );
-            }
-            Declaration::Variable(decl) => {
-                for var in decl.declarations {
-                    let ty = ctx.types.parse_type(match var.type_annotation {
-                        Some(ty) => &ty,
-                        None => panic!("Global variables must have a type annotation"),
-                    });
-
-                    module.exports.insert(var.id.clone(), Export::Variable(ty));
-                }
-            }
-            Declaration::Struct(decl) => {
-                let ty = match ctx.types.get(&decl.id).unwrap().clone() {
-                    TypeInformation::Struct(info) => info,
-                    _ => unreachable!(),
-                };
-
-                module.exports.insert(decl.id.clone(), Export::Struct(ty));
-            }
-            Declaration::Export(_) | Declaration::Import(_) => {
-                panic!("Invalid export: cannot export exports or imports")
-            }
+        if exported {
+            module.exports.insert(
+                decl.name.clone(),
+                Export::Function(decl.to_type(&ctx.types)),
+            );
         }
     });
 

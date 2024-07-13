@@ -24,11 +24,7 @@ fn identify_structs<'a>(
         .body
         .iter()
         .filter_map(|decl| match decl {
-            Declaration::Export(decl) => match decl.as_ref() {
-                Declaration::Struct(decl) => Some(decl),
-                _ => None,
-            },
-            Declaration::Struct(decl) => Some(decl),
+            Declaration::Struct(decl, _) => Some(decl),
             _ => None,
         })
         .map(|decl| (decl.id.clone(), decl))
@@ -194,7 +190,7 @@ pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String
 
     // todo: this really needs to be cleaned up to prevent imports being
     // parsed twice (here and in ast_to_ir)
-    crate::for_each_decl!(program, Import, |decl| {
+    crate::for_each_decl!(program, Import, |(decl, _)| {
         let import_data = (options.resolve_import)(&decl.source);
 
         if import_data.is_mite {
