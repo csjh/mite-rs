@@ -493,23 +493,43 @@ fn identifier_to_ir(ctx: &IRContext, expr: &Identifier) -> IRExpression {
         panic!("Unknown identifier {}", expr);
     }
 }
+
 fn literal_to_ir(ctx: &IRContext, expr: &super::parser::Literal) -> IRExpression {}
+
 fn block_to_ir(ctx: &IRContext, expr: &super::parser::Block) -> IRExpression {}
+
 fn while_to_ir(ctx: &IRContext, expr: &super::parser::While) -> IRExpression {}
+
 fn do_while_to_ir(ctx: &IRContext, expr: &super::parser::DoWhile) -> IRExpression {}
+
 fn for_to_ir(ctx: &IRContext, expr: &super::parser::For) -> IRExpression {}
+
 fn array_to_ir(ctx: &IRContext, expr: &super::parser::Array) -> IRExpression {}
+
 fn object_to_ir(ctx: &IRContext, expr: &super::parser::Object) -> IRExpression {}
+
 fn unary_to_ir(ctx: &IRContext, expr: &super::parser::Unary) -> IRExpression {}
+
 fn binary_to_ir(ctx: &IRContext, expr: &super::parser::Binary) -> IRExpression {}
+
 fn assignment_to_ir(ctx: &IRContext, expr: &super::parser::Assignment) -> IRExpression {}
+
 fn logical_to_ir(ctx: &IRContext, expr: &super::parser::Logical) -> IRExpression {}
+
 fn if_to_ir(ctx: &IRContext, expr: &super::parser::If) -> IRExpression {}
+
 fn member_to_ir(ctx: &IRContext, expr: &super::parser::Member) -> IRExpression {}
+
 fn index_to_ir(ctx: &IRContext, expr: &super::parser::Index) -> IRExpression {}
+
 fn return_to_ir(ctx: &IRContext, expr: &super::parser::Return) -> IRExpression {}
+
 fn break_to_ir(ctx: &IRContext, expr: &super::parser::Break) -> IRExpression {}
+
 fn continue_to_ir(ctx: &IRContext, expr: &super::parser::Continue) -> IRExpression {}
+
 fn empty_to_ir(ctx: &IRContext, expr: &super::parser::Empty) -> IRExpression {}
+
 fn sequence_to_ir(ctx: &IRContext, expr: &super::parser::Sequence) -> IRExpression {}
+
 fn call_to_ir(ctx: &IRContext, expr: &super::parser::Call) -> IRExpression {}
