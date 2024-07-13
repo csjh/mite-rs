@@ -41,109 +41,187 @@ pub(crate) struct IRModule {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct Literal {
+    ty: PrimitiveTypeInformation,
+    value: super::parser::Literal,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Block {
+    ty: TypeInformation,
+    body: Vec<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct While {
+    test: Box<IRExpression>,
+    body: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DoWhile {
+    body: Box<IRExpression>,
+    test: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct For {
+    init: Option<Box<IRExpression>>,
+    test: Option<Box<IRExpression>>,
+    update: Option<Box<IRExpression>>,
+    body: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Array {
+    ty: ArrayTypeInformation,
+    elements: Vec<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Property {
+    name: String,
+    value: IRExpression,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Object {
+    ty: StructTypeInformation,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Unary {
+    ty: TypeInformation,
+    operator: UnaryOperator,
+    operand: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Binary {
+    ty: TypeInformation,
+    operator: BinaryOperator,
+    left: Box<IRExpression>,
+    right: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Assignment {
+    ty: TypeInformation,
+    operator: AssignmentOperator,
+    left: Box<IRExpression>,
+    right: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Logical {
+    ty: TypeInformation,
+    operator: LogicalOperator,
+    left: Box<IRExpression>,
+    right: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct If {
+    ty: TypeInformation,
+    test: Box<IRExpression>,
+    consequent: Box<IRExpression>,
+    alternate: Option<Box<IRExpression>>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Member {
+    ty: TypeInformation,
+    object: Box<IRExpression>,
+    property: String,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Index {
+    ty: TypeInformation,
+    object: Box<IRExpression>,
+    index: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Return {
+    value: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LocalGet {
+    ty: TypeInformation,
+    name: String,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LocalSet {
+    ty: TypeInformation,
+    name: String,
+    value: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GlobalGet {
+    ty: TypeInformation,
+    name: String,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GlobalSet {
+    ty: TypeInformation,
+    name: String,
+    value: Box<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DirectCall {
+    ty: TypeInformation,
+    callee: FunctionTypeInformation,
+    arguments: Vec<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct IndirectCall {
+    ty: TypeInformation,
+    callee: Box<IRExpression>,
+    arguments: Vec<IRExpression>,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum IRExpression {
     // same as parser
-    Literal {
-        ty: PrimitiveTypeInformation,
-        value: Literal,
-    },
-    Block {
-        ty: TypeInformation,
-        body: Vec<IRExpression>,
-    },
+    Literal(Literal),
+    Block(Block),
     Break,
     Continue,
-    While {
-        test: Box<IRExpression>,
-        body: Box<IRExpression>,
-    },
-    DoWhile {
-        body: Box<IRExpression>,
-        test: Box<IRExpression>,
-    },
-    For {
-        init: Option<Box<IRExpression>>,
-        test: Option<Box<IRExpression>>,
-        update: Option<Box<IRExpression>>,
-        body: Box<IRExpression>,
-    },
+    While(While),
+    DoWhile(DoWhile),
+    For(For),
     Empty,
-    Array {
-        ty: ArrayTypeInformation,
-        elements: Vec<IRExpression>,
-    },
-    Object {
-        ty: StructTypeInformation,
-        properties: Vec<Property>,
-    },
+    Array(Array),
+    Object(Object),
     // this is turned into a block
     // Sequence {
     //     ty: TypeInformation,
     //     expressions: Vec<IRExpression>,
     // },
-    Unary {
-        ty: TypeInformation,
-        operator: UnaryOperator,
-        operand: Box<IRExpression>,
-    },
-    Binary {
-        ty: TypeInformation,
-        operator: BinaryOperator,
-        left: Box<IRExpression>,
-        right: Box<IRExpression>,
-    },
-    Assignment {
-        ty: TypeInformation,
-        operator: AssignmentOperator,
-        left: Box<IRExpression>,
-        right: Box<IRExpression>,
-    },
-    Logical {
-        ty: TypeInformation,
-        operator: LogicalOperator,
-        left: Box<IRExpression>,
-        right: Box<IRExpression>,
-    },
-    If {
-        ty: TypeInformation,
-        test: Box<IRExpression>,
-        consequent: Box<IRExpression>,
-        alternate: Option<Box<IRExpression>>,
-    },
-    Member {
-        ty: TypeInformation,
-        object: Box<IRExpression>,
-        property: String,
-    },
-    Index {
-        ty: TypeInformation,
-        object: Box<IRExpression>,
-        index: Box<IRExpression>,
-    },
-    Return {
-        value: Box<IRExpression>,
-    },
+    Unary(Unary),
+    Binary(Binary),
+    Assignment(Assignment),
+    Logical(Logical),
+    If(If),
+    Member(Member),
+    Index(Index),
+    Return(Return),
     // new
     Void(Box<IRExpression>),
-    LocalGet {
-        ty: TypeInformation,
-        name: String,
-    },
-    LocalSet {
-        ty: TypeInformation,
-        name: String,
-        value: Box<IRExpression>,
-    },
-    DirectCall {
-        ty: TypeInformation,
-        callee: FunctionTypeInformation,
-        arguments: Vec<IRExpression>,
-    },
-    IndirectCall {
-        ty: TypeInformation,
-        callee: Box<IRExpression>,
-        arguments: Vec<IRExpression>,
-    },
+    LocalGet(LocalGet),
+    LocalSet(LocalSet),
+    GlobalGet(GlobalGet),
+    GlobalSet(GlobalSet),
+    DirectCall(DirectCall),
+    IndirectCall(IndirectCall),
 }
 
 impl IRExpression {
@@ -154,29 +232,31 @@ impl IRExpression {
         });
 
         match self {
-            IRExpression::Literal { ty, .. } => TypeInformation::Primitive(ty.clone()),
-            IRExpression::Array { ty, .. } => TypeInformation::Array(ty.clone()),
-            IRExpression::Object { ty, .. } => TypeInformation::Struct(ty.clone()),
-            IRExpression::Block { ty, .. } => ty.clone(),
-            IRExpression::Unary { ty, .. } => ty.clone(),
-            IRExpression::Binary { ty, .. } => ty.clone(),
-            IRExpression::Assignment { ty, .. } => ty.clone(),
-            IRExpression::Logical { ty, .. } => ty.clone(),
-            IRExpression::If { ty, .. } => ty.clone(),
-            IRExpression::Member { ty, .. } => ty.clone(),
-            IRExpression::Index { ty, .. } => ty.clone(),
-            IRExpression::DirectCall { ty, .. } => ty.clone(),
-            IRExpression::IndirectCall { ty, .. } => ty.clone(),
+            IRExpression::Literal(Literal { ty, .. }) => TypeInformation::Primitive(ty.clone()),
+            IRExpression::Array(Array { ty, .. }) => TypeInformation::Array(ty.clone()),
+            IRExpression::Object(Object { ty, .. }) => TypeInformation::Struct(ty.clone()),
+            IRExpression::Block(Block { ty, .. }) => ty.clone(),
+            IRExpression::Unary(Unary { ty, .. }) => ty.clone(),
+            IRExpression::Binary(Binary { ty, .. }) => ty.clone(),
+            IRExpression::Assignment(Assignment { ty, .. }) => ty.clone(),
+            IRExpression::Logical(Logical { ty, .. }) => ty.clone(),
+            IRExpression::If(If { ty, .. }) => ty.clone(),
+            IRExpression::Member(Member { ty, .. }) => ty.clone(),
+            IRExpression::Index(Index { ty, .. }) => ty.clone(),
+            IRExpression::LocalGet(LocalGet { ty, .. }) => ty.clone(),
+            IRExpression::LocalSet(LocalSet { ty, .. }) => ty.clone(),
+            IRExpression::GlobalGet(GlobalGet { ty, .. }) => ty.clone(),
+            IRExpression::GlobalSet(GlobalSet { ty, .. }) => ty.clone(),
+            IRExpression::DirectCall(DirectCall { ty, .. }) => ty.clone(),
+            IRExpression::IndirectCall(IndirectCall { ty, .. }) => ty.clone(),
             IRExpression::Break => void,
             IRExpression::Continue => void,
-            IRExpression::While { .. } => void,
-            IRExpression::DoWhile { .. } => void,
-            IRExpression::For { .. } => void,
+            IRExpression::While(While { .. }) => void,
+            IRExpression::DoWhile(DoWhile { .. }) => void,
+            IRExpression::For(For { .. }) => void,
             IRExpression::Empty => void,
-            IRExpression::Return { .. } => void,
+            IRExpression::Return(Return { .. }) => void,
             IRExpression::Void(_) => void,
-            IRExpression::LocalGet { ty, .. } => ty.clone(),
-            IRExpression::LocalSet { ty, .. } => ty.clone(),
         }
     }
 }
