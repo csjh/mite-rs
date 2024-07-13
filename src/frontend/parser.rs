@@ -208,24 +208,24 @@ pub(crate) enum LogicalOperator {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Block {
+pub(crate) struct Block {
     body: Vec<Statement>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct While {
+pub(crate) struct While {
     test: Box<Expression>,
     body: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct DoWhile {
+pub(crate) struct DoWhile {
     test: Box<Expression>,
     body: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct For {
+pub(crate) struct For {
     init: Option<Box<Statement>>,
     test: Option<Box<Expression>>,
     update: Option<Box<Expression>>,
@@ -233,89 +233,98 @@ struct For {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Array {
+pub(crate) struct Array {
     elements: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Object {
+pub(crate) struct Object {
     type_annotation: TypeIdentifier,
     properties: Vec<Property>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Sequence {
+pub(crate) struct Sequence {
     expressions: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Unary {
+pub(crate) struct Unary {
     operator: UnaryOperator,
     argument: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Binary {
+pub(crate) struct Binary {
     operator: BinaryOperator,
     left: Box<Expression>,
     right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Assignment {
+pub(crate) struct Assignment {
     operator: AssignmentOperator,
     left: Box<Expression>,
     right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Logical {
+pub(crate) struct Logical {
     operator: LogicalOperator,
     left: Box<Expression>,
     right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct If {
+pub(crate) struct If {
     test: Box<Expression>,
     consequent: Box<Expression>,
     alternate: Option<Box<Expression>>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Call {
+pub(crate) struct Call {
     callee: Box<Expression>,
     arguments: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Member {
+pub(crate) struct Member {
     object: Box<Expression>,
     property: Identifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Index {
+pub(crate) struct Index {
     object: Box<Expression>,
     index: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Return {
+pub(crate) struct Return {
     argument: Option<Box<Expression>>,
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Break {}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Continue {}
+
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Empty {}
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum Expression {
     Identifier(Identifier),
     Literal(Literal),
     Block(Block),
-    Break,
-    Continue,
+    Break(Break),
+    Continue(Continue),
     While(While),
     DoWhile(DoWhile),
     For(For),
-    Empty,
+    Empty(Empty),
     Array(Array),
     Object(Object),
     Sequence(Sequence),
