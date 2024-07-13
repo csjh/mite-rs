@@ -393,7 +393,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     for_each_decl!(program, Function, |(decl, exported)| {
         ctx.locals = HashMap::new();
 
-        let body = ctx.to_ir(&decl.body);
+        let body = to_ir(&mut ctx, &decl.body);
 
         module.functions.push(IRFunction {
             name: decl.name.clone(),
@@ -450,10 +450,66 @@ impl IRContext {
             globals: HashMap::new(),
         }
     }
+}
 
-    fn to_ir(&mut self, expr: &Expression) -> IRExpression {
-        match expr {
-            Expression::Identifier()
-        }
+fn to_ir(ctx: &mut IRContext, expr: &Expression) -> IRExpression {
+    match expr {
+        Expression::Identifier(x) => identifier_to_ir(ctx, x),
+        Expression::Literal(x) => literal_to_ir(ctx, x),
+        Expression::Block(x) => block_to_ir(ctx, x),
+        Expression::While(x) => while_to_ir(ctx, x),
+        Expression::DoWhile(x) => do_while_to_ir(ctx, x),
+        Expression::For(x) => for_to_ir(ctx, x),
+        Expression::Array(x) => array_to_ir(ctx, x),
+        Expression::Object(x) => object_to_ir(ctx, x),
+        Expression::Unary(x) => unary_to_ir(ctx, x),
+        Expression::Binary(x) => binary_to_ir(ctx, x),
+        Expression::Assignment(x) => assignment_to_ir(ctx, x),
+        Expression::Logical(x) => logical_to_ir(ctx, x),
+        Expression::If(x) => if_to_ir(ctx, x),
+        Expression::Member(x) => member_to_ir(ctx, x),
+        Expression::Index(x) => index_to_ir(ctx, x),
+        Expression::Return(x) => return_to_ir(ctx, x),
+        Expression::Break(x) => break_to_ir(ctx, x),
+        Expression::Continue(x) => continue_to_ir(ctx, x),
+        Expression::Empty(x) => empty_to_ir(ctx, x),
+        Expression::Sequence(x) => sequence_to_ir(ctx, x),
+        Expression::Call(x) => call_to_ir(ctx, x),
     }
 }
+
+fn identifier_to_ir(ctx: &IRContext, expr: &Identifier) -> IRExpression {
+    if let Some(local) = ctx.locals.get(expr) {
+        IRExpression::LocalGet(LocalGet {
+            ty: local.ty(),
+            name: expr.clone(),
+        })
+    } else if let Some(global) = ctx.globals.get(expr) {
+        IRExpression::GlobalGet(GlobalGet {
+            ty: global.ty(),
+            name: expr.clone(),
+        })
+    } else {
+        panic!("Unknown identifier {}", expr);
+    }
+}
+fn literal_to_ir(ctx: &IRContext, expr: &super::parser::Literal) -> IRExpression {}
+fn block_to_ir(ctx: &IRContext, expr: &super::parser::Block) -> IRExpression {}
+fn while_to_ir(ctx: &IRContext, expr: &super::parser::While) -> IRExpression {}
+fn do_while_to_ir(ctx: &IRContext, expr: &super::parser::DoWhile) -> IRExpression {}
+fn for_to_ir(ctx: &IRContext, expr: &super::parser::For) -> IRExpression {}
+fn array_to_ir(ctx: &IRContext, expr: &super::parser::Array) -> IRExpression {}
+fn object_to_ir(ctx: &IRContext, expr: &super::parser::Object) -> IRExpression {}
+fn unary_to_ir(ctx: &IRContext, expr: &super::parser::Unary) -> IRExpression {}
+fn binary_to_ir(ctx: &IRContext, expr: &super::parser::Binary) -> IRExpression {}
+fn assignment_to_ir(ctx: &IRContext, expr: &super::parser::Assignment) -> IRExpression {}
+fn logical_to_ir(ctx: &IRContext, expr: &super::parser::Logical) -> IRExpression {}
+fn if_to_ir(ctx: &IRContext, expr: &super::parser::If) -> IRExpression {}
+fn member_to_ir(ctx: &IRContext, expr: &super::parser::Member) -> IRExpression {}
+fn index_to_ir(ctx: &IRContext, expr: &super::parser::Index) -> IRExpression {}
+fn return_to_ir(ctx: &IRContext, expr: &super::parser::Return) -> IRExpression {}
+fn break_to_ir(ctx: &IRContext, expr: &super::parser::Break) -> IRExpression {}
+fn continue_to_ir(ctx: &IRContext, expr: &super::parser::Continue) -> IRExpression {}
+fn empty_to_ir(ctx: &IRContext, expr: &super::parser::Empty) -> IRExpression {}
+fn sequence_to_ir(ctx: &IRContext, expr: &super::parser::Sequence) -> IRExpression {}
+fn call_to_ir(ctx: &IRContext, expr: &super::parser::Call) -> IRExpression {}
