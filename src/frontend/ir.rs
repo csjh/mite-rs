@@ -317,7 +317,10 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                     match export {
                         Export::Struct(info) => { /* already inserted to types */ }
                         Export::Function(info) => {
-                            ctx.globals.insert(specifier.local.clone(), _);
+                            ctx.globals.insert(
+                                specifier.local.clone(),
+                                Box::new(DirectFunction::new(*info, specifier.local.clone())),
+                            );
                         }
                         Export::Variable(info) => {
                             ctx.globals.insert(specifier.local.clone(), _);
