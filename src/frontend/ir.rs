@@ -43,7 +43,7 @@ pub(crate) struct IRModule {
 #[derive(Debug, Clone)]
 pub(crate) struct Literal {
     pub ty: PrimitiveTypeInformation,
-    value: super::parser::Literal,
+    pub value: super::parser::Literal,
 }
 
 #[derive(Debug, Clone)]
