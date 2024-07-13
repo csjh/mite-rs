@@ -32,7 +32,14 @@ pub enum Export {
     Variable(TypeInformation),
 }
 
+#[derive(Debug, Clone)]
+pub struct InitFunction {
+    pub body: Vec<IRExpression>,
+    pub locals: HashMap<String, TypeInformation>,
+}
+
 pub(crate) struct IRModule {
+    pub init: InitFunction,
     pub exports: HashMap<String, Export>,
     pub globals: HashMap<String, TypeInformation>,
     pub structs: HashMap<String, StructTypeInformation>,
@@ -279,6 +286,10 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     let mut ctx = IRContext::from_program(&program, options);
 
     let mut module = IRModule {
+        init: InitFunction {
+            body: Vec::new(),
+            locals: HashMap::new(),
+        },
         imports: HashMap::new(),
         exports: HashMap::new(),
         structs: HashMap::new(),
@@ -350,13 +361,34 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
 
     for_each_decl!(program, Variable, |(decl, exported)| {
         for var in decl.declarations {
-            ctx.globals.insert(var.id.clone(), _);
+            if var.init.is_none() {
+                panic!("Global variable {} must be initialized", var.id);
+            }
+
+            if var.type_annotation.is_none() {
+                panic!("Global variable {} must have a type annotation", var.id);
+            }
+
+            let global = _;
+            ctx.globals.insert(var.id.clone(), global);
+
+            module
+                .init
+                .body
+                .push(global.set(&to_ir(&mut ctx, var.init.as_ref().unwrap())));
 
             if exported {
                 module.exports.insert(var.id.clone(), Export::Variable(_));
             }
         }
     });
+
+    // copy the locals used in the global variable declarations
+    module.init.locals = ctx
+        .locals
+        .iter()
+        .map(|(k, v)| (k.clone(), v.ty()))
+        .collect();
 
     for_each_decl!(program, Function, |(decl, exported)| {
         ctx.locals = HashMap::new();
