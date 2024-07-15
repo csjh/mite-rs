@@ -51,7 +51,7 @@ impl TypedParameter {
     pub fn to_parameter(&self, types: &Types) -> Parameter {
         Parameter {
             name: self.name.clone(),
-            ty: types.parse_type(&self.type_annotation),
+            ty: types.parse_type(self.type_annotation.clone()),
         }
     }
 }
@@ -79,7 +79,7 @@ impl FunctionDeclaration {
                     .iter()
                     .map(|param| param.to_parameter(types))
                     .collect(),
-                ret: Box::new(types.parse_type(&self.return_type)),
+                ret: Box::new(types.parse_type(self.return_type.clone())),
             },
             is_ref: false,
         }
