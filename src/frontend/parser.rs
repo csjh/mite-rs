@@ -209,100 +209,100 @@ pub(crate) enum LogicalOperator {
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Block {
-    body: Vec<Statement>,
+    pub body: Vec<Statement>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct While {
-    test: Box<Expression>,
-    body: Box<Expression>,
+    pub test: Box<Expression>,
+    pub body: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct DoWhile {
-    test: Box<Expression>,
-    body: Box<Expression>,
+    pub test: Box<Expression>,
+    pub body: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct For {
-    init: Option<Box<Statement>>,
-    test: Option<Box<Expression>>,
-    update: Option<Box<Expression>>,
-    body: Box<Expression>,
+    pub init: Option<Box<Statement>>,
+    pub test: Option<Box<Expression>>,
+    pub update: Option<Box<Expression>>,
+    pub body: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Array {
-    elements: Vec<Expression>,
+    pub elements: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Object {
-    type_annotation: TypeIdentifier,
-    properties: Vec<Property>,
+    pub type_annotation: TypeIdentifier,
+    pub properties: Vec<Property>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Sequence {
-    expressions: Vec<Expression>,
+    pub expressions: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Unary {
-    operator: UnaryOperator,
-    argument: Box<Expression>,
+    pub operator: UnaryOperator,
+    pub argument: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Binary {
-    operator: BinaryOperator,
-    left: Box<Expression>,
-    right: Box<Expression>,
+    pub operator: BinaryOperator,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Assignment {
-    operator: AssignmentOperator,
-    left: Box<Expression>,
-    right: Box<Expression>,
+    pub operator: AssignmentOperator,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Logical {
-    operator: LogicalOperator,
-    left: Box<Expression>,
-    right: Box<Expression>,
+    pub operator: LogicalOperator,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct If {
-    test: Box<Expression>,
-    consequent: Box<Expression>,
-    alternate: Option<Box<Expression>>,
+    pub test: Box<Expression>,
+    pub consequent: Box<Expression>,
+    pub alternate: Option<Box<Expression>>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Call {
-    callee: Box<Expression>,
-    arguments: Vec<Expression>,
+    pub callee: Box<Expression>,
+    pub arguments: Vec<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Member {
-    object: Box<Expression>,
-    property: Identifier,
+    pub object: Box<Expression>,
+    pub property: Identifier,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Index {
-    object: Box<Expression>,
-    index: Box<Expression>,
+    pub object: Box<Expression>,
+    pub index: Box<Expression>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Return {
-    argument: Option<Box<Expression>>,
+    pub argument: Option<Box<Expression>>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
