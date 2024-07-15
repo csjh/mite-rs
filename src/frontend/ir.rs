@@ -313,7 +313,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         }
 
         let import_data = (options.resolve_import)(&decl.source);
-        module.imports.insert(decl.source.clone(), HashMap::new());
+        module.imports.insert(decl.source, HashMap::new());
         let imports = module.imports.get_mut(&decl.source).unwrap();
 
         if import_data.is_mite {
@@ -324,19 +324,22 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
             for specifier in decl.specifiers {
                 let export = imported_module.exports.get(&specifier.imported);
                 if let Some(export) = export {
-                    imports.insert(specifier.local, export.clone());
-                    match export {
+                    let val = match export {
                         Export::Struct(info) => { /* already inserted to types */ }
                         Export::Function(info) => {
                             ctx.globals.insert(
-                                specifier.local.clone(),
-                                Box::new(DirectFunction::new(*info, specifier.local.clone())),
+                                specifier.local,
+                                Box::new(DirectFunction::new(*info, specifier.local)),
                             );
                         }
                         Export::Variable(info) => {
-                            ctx.globals.insert(specifier.local.clone(), _);
+                            ctx.globals.insert(specifier.local, _);
                         }
-                    }
+                    };
+
+                    imports.insert(specifier.local, *export);
+
+                    val
                 } else {
                     panic!("Imported symbol {} not found", specifier.imported);
                 }
@@ -347,15 +350,11 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     for_each_decl!(program, Function, |(decl, exported)| {
         let ty = decl.to_type(&ctx.types);
 
-        ctx.globals.insert(
-            decl.name.clone(),
-            Box::new(DirectFunction::new(ty, decl.name.clone())),
-        );
+        ctx.globals
+            .insert(decl.name, Box::new(DirectFunction::new(ty, decl.name)));
 
         if exported {
-            module
-                .exports
-                .insert(decl.name.clone(), Export::Function(ty));
+            module.exports.insert(decl.name, Export::Function(ty));
         }
     });
 
@@ -370,7 +369,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
             }
 
             let global = _;
-            ctx.globals.insert(var.id.clone(), global);
+            ctx.globals.insert(var.id, global);
 
             module
                 .init
@@ -378,7 +377,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                 .push(global.set(&to_ir(&mut ctx, var.init.unwrap(), None)));
 
             if exported {
-                module.exports.insert(var.id.clone(), Export::Variable(_));
+                module.exports.insert(var.id, Export::Variable(_));
             }
         }
     });
@@ -393,17 +392,16 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
         let body = to_ir(&mut ctx, decl.body, Some(*ty.implementation.ret));
 
         module.functions.push(IRFunction {
-            name: decl.name.clone(),
+            name: decl.name,
             ty,
             locals: ctx.locals.into_iter().map(|(k, v)| (k, v.ty())).collect(),
             body,
         });
 
         if exported {
-            module.exports.insert(
-                decl.name.clone(),
-                Export::Function(decl.to_type(&ctx.types)),
-            );
+            module
+                .exports
+                .insert(decl.name, Export::Function(decl.to_type(&ctx.types)));
         }
     });
 
@@ -427,7 +425,7 @@ pub(super) struct IRContext {
 
 impl IRContext {
     fn from_program(program: &Program, options: Options) -> Self {
-        let types = Types(build_types(program, options));
+        let types = build_types(program, options);
 
         IRContext {
             current_function: FunctionInformation {
@@ -511,11 +509,11 @@ fn variable_decl_to_ir(
         };
 
         let local = _;
-        ctx.locals.insert(var.id.clone(), local);
+        ctx.locals.insert(var.id, local);
 
         exprs.push(IRExpression::LocalSet(LocalSet {
-            ty: ty.clone(),
-            name: var.id.clone(),
+            ty,
+            name: var.id,
             value: Box::new(init),
         }));
     }
@@ -533,12 +531,12 @@ fn identifier_to_ir(ctx: &IRContext, expr: super::parser::Identifier) -> IRExpre
     if let Some(local) = ctx.locals.get(&expr) {
         IRExpression::LocalGet(LocalGet {
             ty: local.ty(),
-            name: expr.clone(),
+            name: expr,
         })
     } else if let Some(global) = ctx.globals.get(&expr) {
         IRExpression::GlobalGet(GlobalGet {
             ty: global.ty(),
-            name: expr.clone(),
+            name: expr,
         })
     } else {
         panic!("Unknown identifier {}", expr);

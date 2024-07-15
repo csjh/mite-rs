@@ -18,8 +18,8 @@ use super::{
 
 fn identify_structs<'a>(
     program: &'a Program,
-    types: &HashMap<String, TypeInformation>,
-) -> (HashMap<String, TypeInformation>, Vec<&'a StructDeclaration>) {
+    types: &mut HashMap<String, TypeInformation>,
+) -> Vec<&'a StructDeclaration> {
     let struct_declarations = program
         .body
         .iter()
@@ -50,14 +50,13 @@ fn identify_structs<'a>(
     let mut top_sorted_structs = topological_sort(&adj_list);
     top_sorted_structs.reverse();
 
-    let mut types = types.clone();
-    for struct_name in top_sorted_structs {
-        let decl = struct_declarations.get(&struct_name).unwrap();
+    for struct_name in top_sorted_structs.into_iter() {
+        let decl = struct_declarations.get(struct_name).unwrap();
         let struct_type = struct_declaration_to_type_information(&types, decl);
         types.insert(struct_name.clone(), TypeInformation::Struct(struct_type));
     }
 
-    (types, struct_declarations.values().cloned().collect())
+    struct_declarations.into_values().collect()
 }
 
 fn has_cycle(adj_list: &HashMap<String, HashSet<String>>) {
@@ -67,23 +66,23 @@ fn has_cycle(adj_list: &HashMap<String, HashSet<String>>) {
         if seen.contains(node) {
             continue;
         }
-        let mut stack = vec![node.clone()];
+        let mut stack = vec![node];
         let mut visited = HashSet::new();
         while let Some(current) = stack.pop() {
-            if visited.contains(&current) {
+            if visited.contains(current) {
                 eprintln!("Cycle detected at node {}", current);
                 return;
             }
-            visited.insert(current.clone());
-            seen.insert(current.clone());
-            for neighbor in adj_list.get(&current).unwrap() {
-                stack.push(neighbor.clone());
+            visited.insert(current);
+            seen.insert(current);
+            for neighbor in adj_list.get(current).unwrap() {
+                stack.push(neighbor);
             }
         }
     }
 }
 
-fn topological_sort(adj_list: &HashMap<String, HashSet<String>>) -> Vec<String> {
+fn topological_sort(adj_list: &HashMap<String, HashSet<String>>) -> Vec<&String> {
     let mut l = Vec::new();
     let mut has_incoming_edge = adj_list
         .iter()
@@ -101,7 +100,7 @@ fn topological_sort(adj_list: &HashMap<String, HashSet<String>>) -> Vec<String> 
         .collect::<VecDeque<&String>>();
 
     while let Some(n) = s.pop_front() {
-        l.push(n.clone());
+        l.push(n);
         for m in adj_list.get(n).unwrap() {
             has_incoming_edge.remove(m);
             if !adj_list.iter().any(|(_, x)| x.contains(m)) {
@@ -129,22 +128,25 @@ fn struct_declaration_to_type_information(
     for field in &decl.fields {
         // should probably make this not stupid
         let ty = Types(types.clone()).parse_type(field.type_annotation.clone());
+
+        let before = offset;
+        offset += ty.sizeof();
+
         struct_type.fields.insert(
             field.name.clone(),
             StructField {
                 name: field.name.clone(),
-                ty: ty.clone(),
-                offset,
+                ty,
+                offset: before,
             },
         );
-        offset += ty.sizeof();
     }
     struct_type.sizeof = offset;
 
     struct_type
 }
 
-pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String, TypeInformation> {
+pub(super) fn build_types(program: &Program, options: Options) -> Types {
     let mut types = HashMap::new();
 
     macro_rules! insert_primitive {
@@ -196,17 +198,14 @@ pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String
         if import_data.is_mite {
             let tokens = tokenize(&import_data.source);
             let ast = parse(tokens);
-            let imported_module = ast_to_ir(ast, options.clone());
+            let mut imported_module = ast_to_ir(ast, options.clone());
 
             for specifier in decl.specifiers {
-                let export = imported_module.exports.get(&specifier.imported);
+                let export = imported_module.exports.remove(&specifier.imported);
                 if let Some(export) = export {
                     match export {
                         Export::Struct(info) => {
-                            types.insert(
-                                specifier.local.clone(),
-                                TypeInformation::Struct(info.clone()),
-                            );
+                            types.insert(specifier.local, TypeInformation::Struct(info));
                         }
                         _ => {}
                     }
@@ -217,24 +216,23 @@ pub(super) fn build_types(program: &Program, options: Options) -> HashMap<String
         }
     });
 
-    let (mut types, declarations) = identify_structs(&program, &types);
-    // 🤔
-    let typeser = Types(types.clone());
+    let declarations = identify_structs(&program, &mut types);
+    let mut typeser = Types(types);
 
     for StructDeclaration { id, methods, .. } in declarations {
         for decl in methods {
-            let struct_type = match types.get_mut(id).unwrap() {
+            let ty = decl.to_type(&typeser);
+
+            let struct_type = match typeser.0.get_mut(id).unwrap() {
                 TypeInformation::Struct(info) => info,
                 _ => unreachable!(),
             };
 
-            struct_type
-                .methods
-                .insert(decl.name.clone(), decl.to_type(&typeser));
+            struct_type.methods.insert(decl.name.clone(), ty);
         }
     }
 
-    types
+    typeser
 }
 
 pub(super) struct Types(pub HashMap<String, TypeInformation>);
