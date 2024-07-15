@@ -375,7 +375,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
             module
                 .init
                 .body
-                .push(global.set(&to_ir(&mut ctx, var.init.as_ref().unwrap())));
+                .push(global.set(&to_ir(&mut ctx, var.init.unwrap(), None)));
 
             if exported {
                 module.exports.insert(var.id.clone(), Export::Variable(_));
@@ -384,25 +384,18 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
     });
 
     // copy the locals used in the global variable declarations
-    module.init.locals = ctx
-        .locals
-        .iter()
-        .map(|(k, v)| (k.clone(), v.ty()))
-        .collect();
+    module.init.locals = ctx.locals.into_iter().map(|(k, v)| (k, v.ty())).collect();
 
     for_each_decl!(program, Function, |(decl, exported)| {
         ctx.locals = HashMap::new();
 
-        let body = to_ir(&mut ctx, &decl.body);
+        let ty = decl.to_type(&ctx.types);
+        let body = to_ir(&mut ctx, decl.body, Some(*ty.implementation.ret));
 
         module.functions.push(IRFunction {
             name: decl.name.clone(),
-            ty: decl.to_type(&ctx.types),
-            locals: ctx
-                .locals
-                .iter()
-                .map(|(k, v)| (k.clone(), v.ty()))
-                .collect(),
+            ty,
+            locals: ctx.locals.into_iter().map(|(k, v)| (k, v.ty())).collect(),
             body,
         });
 
@@ -429,6 +422,7 @@ pub(super) struct IRContext {
     pub locals: HashMap<String, Box<dyn MiteType>>,
     pub globals: HashMap<String, Box<dyn MiteType>>,
     pub current_function: FunctionInformation,
+    pub expected: Option<TypeInformation>,
 }
 
 impl IRContext {
@@ -448,12 +442,19 @@ impl IRContext {
             },
             locals: HashMap::new(),
             globals: HashMap::new(),
+            expected: None,
         }
     }
 }
 
-fn to_ir(ctx: &mut IRContext, expr: &Expression) -> IRExpression {
-    match expr {
+fn to_ir(
+    ctx: &mut IRContext,
+    expr: super::parser::Expression,
+    mut expected: Option<TypeInformation>,
+) -> IRExpression {
+    std::mem::swap(&mut ctx.expected, &mut expected);
+
+    let ret = match expr {
         Expression::Identifier(x) => identifier_to_ir(ctx, x),
         Expression::Literal(x) => literal_to_ir(ctx, x),
         Expression::Block(x) => block_to_ir(ctx, x),
@@ -475,16 +476,66 @@ fn to_ir(ctx: &mut IRContext, expr: &Expression) -> IRExpression {
         Expression::Empty(x) => empty_to_ir(ctx, x),
         Expression::Sequence(x) => sequence_to_ir(ctx, x),
         Expression::Call(x) => call_to_ir(ctx, x),
+    };
+
+    std::mem::swap(&mut ctx.expected, &mut expected);
+
+    ret
+}
+
+fn statement_to_ir(ctx: &mut IRContext, expr: super::parser::Statement) -> IRExpression {
+    match expr {
+        Statement::Expression(x) => to_ir(ctx, x, None),
+        Statement::VariableDeclaration(x) => variable_decl_to_ir(ctx, x),
     }
 }
 
-fn identifier_to_ir(ctx: &IRContext, expr: &Identifier) -> IRExpression {
-    if let Some(local) = ctx.locals.get(expr) {
+fn variable_decl_to_ir(
+    ctx: &mut IRContext,
+    expr: super::parser::VariableDeclaration,
+) -> IRExpression {
+    let mut exprs = Vec::new();
+
+    for var in &expr.declarations {
+        let (init, ty) = if let (&Some(ty), &Some(init)) = (&var.type_annotation, &var.init) {
+            let ty = ctx.types.parse_type(ty);
+            (to_ir(ctx, init, Some(ty)), ty)
+        } else if let &Some(init) = &var.init {
+            let init = to_ir(ctx, init, None);
+            (init, init.ty())
+        } else if let &Some(ty) = &var.type_annotation {
+            let ty = ctx.types.parse_type(ty);
+            (IRExpression::Empty, ty)
+        } else {
+            panic!("Variable declaration must have a type annotation or initializer");
+        };
+
+        let local = _;
+        ctx.locals.insert(var.id.clone(), local);
+
+        exprs.push(IRExpression::LocalSet(LocalSet {
+            ty: ty.clone(),
+            name: var.id.clone(),
+            value: Box::new(init),
+        }));
+    }
+
+    IRExpression::Block(Block {
+        ty: TypeInformation::Primitive(PrimitiveTypeInformation {
+            name: "void",
+            sizeof: 0,
+        }),
+        body: exprs,
+    })
+}
+
+fn identifier_to_ir(ctx: &IRContext, expr: super::parser::Identifier) -> IRExpression {
+    if let Some(local) = ctx.locals.get(&expr) {
         IRExpression::LocalGet(LocalGet {
             ty: local.ty(),
             name: expr.clone(),
         })
-    } else if let Some(global) = ctx.globals.get(expr) {
+    } else if let Some(global) = ctx.globals.get(&expr) {
         IRExpression::GlobalGet(GlobalGet {
             ty: global.ty(),
             name: expr.clone(),
