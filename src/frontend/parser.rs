@@ -1172,15 +1172,15 @@ impl Parser {
         Ok(parent)
     }
     fn parse_empty_expression(&mut self) -> Result<Expression, String> {
-        Ok(Expression::Empty)
+        Ok(Expression::Empty(Empty {}))
     }
     fn parse_continue_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::Continue)?;
-        Ok(Expression::Continue)
+        Ok(Expression::Continue(Continue {}))
     }
     fn parse_break_expression(&mut self) -> Result<Expression, String> {
         self.eat_token(Token::Break)?;
-        Ok(Expression::Break)
+        Ok(Expression::Break(Break {}))
     }
     fn parse_unary_expression(&mut self) -> Result<Expression, String> {
         let operator = self.next().clone();
