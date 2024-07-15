@@ -128,7 +128,7 @@ fn struct_declaration_to_type_information(
     let mut offset = 0;
     for field in &decl.fields {
         // should probably make this not stupid
-        let ty = Types(types.clone()).parse_type(&field.type_annotation);
+        let ty = Types(types.clone()).parse_type(field.type_annotation.clone());
         struct_type.fields.insert(
             field.name.clone(),
             StructField {
@@ -252,23 +252,26 @@ impl Types {
         self.0.insert(name, ty);
     }
 
-    pub fn parse_type(&self, ty: &TypeIdentifier) -> TypeInformation {
+    pub fn parse_type(&self, ty: TypeIdentifier) -> TypeInformation {
         match ty {
-            TypeIdentifier::Identifier { name, .. } => self.0.get(name).unwrap().clone(),
+            TypeIdentifier::Identifier { name, .. } => self.0.get(&name).unwrap().clone(),
             TypeIdentifier::Array {
                 element_type,
                 size,
                 is_ref,
-            } => TypeInformation::Array(ArrayTypeInformation {
-                name: if *size > 0 {
-                    format!("[{}; {}]", self.parse_type(element_type), size)
-                } else {
-                    format!("[{}]", self.parse_type(element_type))
-                },
-                element_type: Box::new(self.parse_type(element_type)),
-                length: Some(*size),
-                is_ref: *is_ref,
-            }),
+            } => {
+                let ty = self.parse_type(*element_type);
+                TypeInformation::Array(ArrayTypeInformation {
+                    name: if size > 0 {
+                        format!("[{}; {}]", ty, size)
+                    } else {
+                        format!("[{}]", ty)
+                    },
+                    element_type: Box::new(ty),
+                    length: Some(size),
+                    is_ref,
+                })
+            }
             TypeIdentifier::Function {
                 parameters,
                 return_type,
@@ -278,7 +281,7 @@ impl Types {
                     .iter()
                     .map(|param| param.to_parameter(&self))
                     .collect::<Vec<Parameter>>();
-                let ret = Box::new(self.parse_type(return_type));
+                let ret = Box::new(self.parse_type(*return_type));
 
                 let name = format!(
                     "({}) => {}",
@@ -292,7 +295,7 @@ impl Types {
                 TypeInformation::Function(FunctionTypeInformation {
                     name,
                     implementation: FunctionInformation { args, ret },
-                    is_ref: *is_ref,
+                    is_ref,
                 })
             }
         }
