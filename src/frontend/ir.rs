@@ -494,42 +494,77 @@ fn identifier_to_ir(ctx: &IRContext, expr: &Identifier) -> IRExpression {
     }
 }
 
-fn literal_to_ir(ctx: &IRContext, expr: &super::parser::Literal) -> IRExpression {}
+fn literal_to_ir(ctx: &IRContext, expr: super::parser::Literal) -> IRExpression {}
 
-fn block_to_ir(ctx: &IRContext, expr: &super::parser::Block) -> IRExpression {}
+fn block_to_ir(ctx: &mut IRContext, expr: super::parser::Block) -> IRExpression {
+    let body = expr
+        .body
+        .into_iter()
+        // todo: handle ctx.expected
+        .map(|expr| statement_to_ir(ctx, expr))
+        .collect::<Vec<IRExpression>>();
 
-fn while_to_ir(ctx: &IRContext, expr: &super::parser::While) -> IRExpression {}
+    IRExpression::Block(Block {
+        ty: body.last().unwrap().ty(),
+        body,
+    })
+}
 
-fn do_while_to_ir(ctx: &IRContext, expr: &super::parser::DoWhile) -> IRExpression {}
+fn while_to_ir(ctx: &IRContext, expr: super::parser::While) -> IRExpression {}
 
-fn for_to_ir(ctx: &IRContext, expr: &super::parser::For) -> IRExpression {}
+fn do_while_to_ir(ctx: &IRContext, expr: super::parser::DoWhile) -> IRExpression {}
 
-fn array_to_ir(ctx: &IRContext, expr: &super::parser::Array) -> IRExpression {}
+fn for_to_ir(ctx: &IRContext, expr: super::parser::For) -> IRExpression {}
 
-fn object_to_ir(ctx: &IRContext, expr: &super::parser::Object) -> IRExpression {}
+fn array_to_ir(ctx: &IRContext, expr: super::parser::Array) -> IRExpression {}
 
-fn unary_to_ir(ctx: &IRContext, expr: &super::parser::Unary) -> IRExpression {}
+fn object_to_ir(ctx: &IRContext, expr: super::parser::Object) -> IRExpression {}
 
-fn binary_to_ir(ctx: &IRContext, expr: &super::parser::Binary) -> IRExpression {}
+fn unary_to_ir(ctx: &IRContext, expr: super::parser::Unary) -> IRExpression {}
 
-fn assignment_to_ir(ctx: &IRContext, expr: &super::parser::Assignment) -> IRExpression {}
+fn binary_to_ir(ctx: &IRContext, expr: super::parser::Binary) -> IRExpression {}
 
-fn logical_to_ir(ctx: &IRContext, expr: &super::parser::Logical) -> IRExpression {}
+fn assignment_to_ir(ctx: &IRContext, expr: super::parser::Assignment) -> IRExpression {}
 
-fn if_to_ir(ctx: &IRContext, expr: &super::parser::If) -> IRExpression {}
+fn logical_to_ir(ctx: &IRContext, expr: super::parser::Logical) -> IRExpression {}
 
-fn member_to_ir(ctx: &IRContext, expr: &super::parser::Member) -> IRExpression {}
+fn if_to_ir(ctx: &IRContext, expr: super::parser::If) -> IRExpression {}
 
-fn index_to_ir(ctx: &IRContext, expr: &super::parser::Index) -> IRExpression {}
+fn member_to_ir(ctx: &IRContext, expr: super::parser::Member) -> IRExpression {}
 
-fn return_to_ir(ctx: &IRContext, expr: &super::parser::Return) -> IRExpression {}
+fn index_to_ir(ctx: &IRContext, expr: super::parser::Index) -> IRExpression {}
 
-fn break_to_ir(ctx: &IRContext, expr: &super::parser::Break) -> IRExpression {}
+fn return_to_ir(ctx: &mut IRContext, expr: super::parser::Return) -> IRExpression {
+    IRExpression::Return(Return {
+        value: Box::new(expr.argument.map_or(IRExpression::Empty, |v| {
+            to_ir(ctx, *v, Some(*ctx.current_function.ret.clone()))
+        })),
+    })
+}
 
-fn continue_to_ir(ctx: &IRContext, expr: &super::parser::Continue) -> IRExpression {}
+fn break_to_ir(_ctx: &IRContext, _expr: super::parser::Break) -> IRExpression {
+    IRExpression::Break
+}
 
-fn empty_to_ir(ctx: &IRContext, expr: &super::parser::Empty) -> IRExpression {}
+fn continue_to_ir(_ctx: &IRContext, _expr: super::parser::Continue) -> IRExpression {
+    IRExpression::Continue
+}
 
-fn sequence_to_ir(ctx: &IRContext, expr: &super::parser::Sequence) -> IRExpression {}
+fn empty_to_ir(_ctx: &IRContext, _expr: super::parser::Empty) -> IRExpression {
+    IRExpression::Empty
+}
 
-fn call_to_ir(ctx: &IRContext, expr: &super::parser::Call) -> IRExpression {}
+fn sequence_to_ir(ctx: &mut IRContext, expr: super::parser::Sequence) -> IRExpression {
+    let body: Vec<IRExpression> = expr
+        .expressions
+        .into_iter()
+        .map(|expr| to_ir(ctx, expr, ctx.expected.clone()))
+        .collect();
+
+    IRExpression::Block(Block {
+        ty: body.last().unwrap().ty(),
+        body,
+    })
+}
+
+fn call_to_ir(ctx: &IRContext, expr: super::parser::Call) -> IRExpression {}
