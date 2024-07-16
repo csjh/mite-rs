@@ -613,11 +613,11 @@ fn empty_to_ir(_ctx: &IRContext, _expr: super::parser::Empty) -> IRExpression {
 }
 
 fn sequence_to_ir(ctx: &mut IRContext, expr: super::parser::Sequence) -> IRExpression {
-    let body: Vec<IRExpression> = expr
+    let body = expr
         .expressions
         .into_iter()
         .map(|expr| to_ir(ctx, expr, ctx.expected.clone()))
-        .collect();
+        .collect::<Vec<IRExpression>>();
 
     IRExpression::Block(Block {
         ty: body.last().unwrap().ty(),
