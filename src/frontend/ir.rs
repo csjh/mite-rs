@@ -196,16 +196,25 @@ pub(crate) struct IndirectCall {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct Break;
+
+#[derive(Debug, Clone)]
+pub(crate) struct Continue;
+
+#[derive(Debug, Clone)]
+pub(crate) struct Empty;
+
+#[derive(Debug, Clone)]
 pub(crate) enum IRExpression {
     // same as parser
     Literal(Literal),
     Block(Block),
-    Break,
-    Continue,
+    Break(Break),
+    Continue(Continue),
     While(While),
     DoWhile(DoWhile),
     For(For),
-    Empty,
+    Empty(Empty),
     Array(Array),
     Object(Object),
     // this is turned into a block
@@ -256,12 +265,12 @@ impl IRExpression {
             IRExpression::GlobalSet(GlobalSet { ty, .. }) => ty.clone(),
             IRExpression::DirectCall(DirectCall { ty, .. }) => ty.clone(),
             IRExpression::IndirectCall(IndirectCall { ty, .. }) => ty.clone(),
-            IRExpression::Break => void,
-            IRExpression::Continue => void,
+            IRExpression::Break(_) => void,
+            IRExpression::Continue(_) => void,
             IRExpression::While(While { .. }) => void,
             IRExpression::DoWhile(DoWhile { .. }) => void,
             IRExpression::For(For { .. }) => void,
-            IRExpression::Empty => void,
+            IRExpression::Empty(_) => void,
             IRExpression::Return(Return { .. }) => void,
             IRExpression::Void(_) => void,
         }
@@ -503,7 +512,7 @@ fn variable_decl_to_ir(
             (init, init.ty())
         } else if let &Some(ty) = &var.type_annotation {
             let ty = ctx.types.parse_type(ty);
-            (IRExpression::Empty, ty)
+            (IRExpression::Empty(Empty {}), ty)
         } else {
             panic!("Variable declaration must have a type annotation or initializer");
         };
@@ -585,22 +594,22 @@ fn index_to_ir(ctx: &IRContext, expr: super::parser::Index) -> IRExpression {}
 
 fn return_to_ir(ctx: &mut IRContext, expr: super::parser::Return) -> IRExpression {
     IRExpression::Return(Return {
-        value: Box::new(expr.argument.map_or(IRExpression::Empty, |v| {
+        value: Box::new(expr.argument.map_or(IRExpression::Empty(Empty {}), |v| {
             to_ir(ctx, *v, Some(*ctx.current_function.ret.clone()))
         })),
     })
 }
 
 fn break_to_ir(_ctx: &IRContext, _expr: super::parser::Break) -> IRExpression {
-    IRExpression::Break
+    IRExpression::Break(Break {})
 }
 
 fn continue_to_ir(_ctx: &IRContext, _expr: super::parser::Continue) -> IRExpression {
-    IRExpression::Continue
+    IRExpression::Continue(Continue {})
 }
 
 fn empty_to_ir(_ctx: &IRContext, _expr: super::parser::Empty) -> IRExpression {
-    IRExpression::Empty
+    IRExpression::Empty(Empty {})
 }
 
 fn sequence_to_ir(ctx: &mut IRContext, expr: super::parser::Sequence) -> IRExpression {
