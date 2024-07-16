@@ -5,7 +5,7 @@ use super::{
     },
     type_initialization::{build_types, Types},
 };
-use crate::frontend::{parser::*, tokenizer::tokenize};
+use crate::frontend::{mitetype::StringTypeInformation, parser::*, tokenizer::tokenize};
 use std::collections::HashMap;
 
 pub struct ResolvedImport {
@@ -47,11 +47,7 @@ pub(crate) struct IRModule {
     pub functions: Vec<IRFunction>,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Literal {
-    pub ty: PrimitiveTypeInformation,
-    pub value: super::parser::Literal,
-}
+pub(crate) type Literal = super::parser::Literal;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Block {
@@ -242,13 +238,36 @@ pub(crate) enum IRExpression {
 
 impl IRExpression {
     pub fn ty(&self) -> TypeInformation {
-        let void = TypeInformation::Primitive(PrimitiveTypeInformation {
-            name: "void",
-            sizeof: 0,
-        });
+        macro_rules! primitive {
+            ($name:expr, $sizeof:expr) => {
+                TypeInformation::Primitive(PrimitiveTypeInformation {
+                    name: $name,
+                    sizeof: $sizeof,
+                })
+            };
+        }
+
+        let void = primitive!("void", 0);
 
         match self {
-            IRExpression::Literal(Literal { ty, .. }) => TypeInformation::Primitive(ty.clone()),
+            IRExpression::Literal(lit) => match lit {
+                Literal::I32(_) => primitive!("i32", 4),
+                Literal::U32(_) => primitive!("u32", 4),
+                Literal::I64(_) => primitive!("i64", 8),
+                Literal::U64(_) => primitive!("u64", 8),
+                Literal::F64(_) => primitive!("f64", 8),
+                Literal::I8x16(_) => primitive!("i8x16", 16),
+                Literal::U8x16(_) => primitive!("u8x16", 16),
+                Literal::I16x8(_) => primitive!("i16x8", 16),
+                Literal::U16x8(_) => primitive!("u16x8", 16),
+                Literal::I32x4(_) => primitive!("i32x4", 16),
+                Literal::U32x4(_) => primitive!("u32x4", 16),
+                Literal::I64x2(_) => primitive!("i64x2", 16),
+                Literal::U64x2(_) => primitive!("u64x2", 16),
+                Literal::F32x4(_) => primitive!("f32x4", 16),
+                Literal::F64x2(_) => primitive!("f64x2", 16),
+                Literal::String(_) => TypeInformation::String(StringTypeInformation {}),
+            },
             IRExpression::Array(Array { ty, .. }) => TypeInformation::Array(ty.clone()),
             IRExpression::Object(Object { ty, .. }) => TypeInformation::Struct(ty.clone()),
             IRExpression::Block(Block { ty, .. }) => ty.clone(),

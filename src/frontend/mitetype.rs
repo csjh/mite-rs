@@ -373,13 +373,7 @@ impl MiteType for LocalPrimitive {
     }
 
     fn sizeof(&self) -> IRExpression {
-        IRExpression::Literal(Literal {
-            ty: PrimitiveTypeInformation {
-                name: "u32",
-                sizeof: 4,
-            },
-            value: super::parser::Literal::U32(self.ty.sizeof),
-        })
+        IRExpression::Literal(Literal::U32(self.ty.sizeof))
     }
 
     fn ty(&self) -> TypeInformation {
