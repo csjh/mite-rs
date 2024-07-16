@@ -260,11 +260,6 @@ impl Types {
             } => {
                 let ty = self.parse_type(*element_type);
                 TypeInformation::Array(ArrayTypeInformation {
-                    name: if size > 0 {
-                        format!("[{}; {}]", ty, size)
-                    } else {
-                        format!("[{}]", ty)
-                    },
                     element_type: Box::new(ty),
                     length: Some(size),
                     is_ref,

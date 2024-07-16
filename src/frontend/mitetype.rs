@@ -19,7 +19,6 @@ const PTR: PrimitiveTypeInformation = PrimitiveTypeInformation {
 
 #[derive(Debug, Clone)]
 pub(super) struct ArrayTypeInformation {
-    pub name: String,
     pub element_type: Box<TypeInformation>,
     pub length: Option<u32>,
     pub is_ref: bool,
@@ -156,7 +155,13 @@ impl fmt::Display for TypeInformation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TypeInformation::Primitive(info) => write!(f, "{}", info.name),
-            TypeInformation::Array(info) => write!(f, "{}", info.name),
+            TypeInformation::Array(info) => {
+                if let Some(len) = info.length {
+                    write!(f, "[{}; {}]", info.element_type, len)
+                } else {
+                    write!(f, "[{}]", info.element_type)
+                }
+            }
             TypeInformation::Struct(info) => write!(f, "{}", info.name),
             TypeInformation::String(_) => write!(f, "string"),
             TypeInformation::Function(info) => write!(f, "{}", info.name),
