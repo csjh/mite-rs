@@ -12,11 +12,6 @@ pub(super) struct PrimitiveTypeInformation {
     pub sizeof: u32,
 }
 
-const PTR: PrimitiveTypeInformation = PrimitiveTypeInformation {
-    name: "u32",
-    sizeof: 4,
-};
-
 #[derive(Debug, Clone)]
 pub(super) struct ArrayTypeInformation {
     pub element_type: Box<TypeInformation>,
@@ -400,10 +395,7 @@ impl MiteType for GlobalPrimitive {
 
 impl MiteType for Pointer {
     fn ty(&self) -> TypeInformation {
-        TypeInformation::Primitive(PrimitiveTypeInformation {
-            name: "u32",
-            sizeof: 4,
-        })
+        Types::PTR
     }
 }
 

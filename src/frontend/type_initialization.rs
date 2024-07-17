@@ -161,15 +161,19 @@ pub(super) fn build_types(program: &Program, options: Options) -> Types {
         };
     }
 
-    insert_primitive!("void", 0);
-    insert_primitive!("bool", 4);
+    types.insert("void".to_string(), Types::VOID);
+    types.insert("bool".to_string(), Types::BOOL);
+    types.insert("u32".to_string(), Types::U32);
+
+    // insert_primitive!("void", 0);
+    // insert_primitive!("bool", 4);
     insert_primitive!("i8", 1);
     insert_primitive!("i16", 2);
     insert_primitive!("i32", 4);
     insert_primitive!("i64", 8);
     insert_primitive!("u8", 1);
     insert_primitive!("u16", 2);
-    insert_primitive!("u32", 4);
+    // insert_primitive!("u32", 4);
     insert_primitive!("u64", 8);
     insert_primitive!("f32", 4);
     insert_primitive!("f64", 8);
@@ -237,13 +241,23 @@ pub(super) fn build_types(program: &Program, options: Options) -> Types {
 
 pub(super) struct Types(pub HashMap<String, TypeInformation>);
 
+macro_rules! primitive {
+    ($name: expr, $sizeof: expr) => {
+        TypeInformation::Primitive(PrimitiveTypeInformation {
+            name: $name,
+            sizeof: $sizeof,
+        })
+    };
+}
+
 impl Types {
+    pub const VOID: TypeInformation = primitive!("void", 0);
+    pub const BOOL: TypeInformation = primitive!("bool", 4);
+    pub const U32: TypeInformation = primitive!("u32", 4);
+    pub const PTR: TypeInformation = Self::U32;
+
     pub fn get(&self, name: &str) -> Option<&TypeInformation> {
         self.0.get(name)
-    }
-
-    pub fn get_known(&self, name: &'static str) -> &TypeInformation {
-        self.0.get(name).unwrap()
     }
 
     pub fn add(&mut self, name: String, ty: TypeInformation) {
