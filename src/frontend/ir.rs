@@ -396,6 +396,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                 panic!("Global variable {} must have a type annotation", var.id);
             }
 
+            let ty = ctx.types.parse_type(var.type_annotation.unwrap());
             let global = _;
             ctx.globals.insert(var.id, global);
 
@@ -405,7 +406,7 @@ pub fn ast_to_ir(program: Program, options: Options) -> IRModule {
                 .push(global.set(&to_ir(&mut ctx, var.init.unwrap(), None)));
 
             if exported {
-                module.exports.insert(var.id, Export::Variable(_));
+                module.exports.insert(var.id, Export::Variable(ty));
             }
         }
     });
