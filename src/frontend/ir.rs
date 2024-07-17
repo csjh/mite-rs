@@ -459,7 +459,7 @@ impl IRContext {
         IRContext {
             current_function: FunctionInformation {
                 args: Vec::new(),
-                ret: Box::new(types.get_known("void").clone()),
+                ret: Box::new(Types::VOID),
             },
             types,
             stacks: Stacks {
@@ -548,10 +548,7 @@ fn variable_decl_to_ir(
     }
 
     IRExpression::Block(Block {
-        ty: TypeInformation::Primitive(PrimitiveTypeInformation {
-            name: "void",
-            sizeof: 0,
-        }),
+        ty: Types::VOID,
         body: exprs,
     })
 }
@@ -604,13 +601,62 @@ fn binary_to_ir(ctx: &IRContext, expr: super::parser::Binary) -> IRExpression {}
 
 fn assignment_to_ir(ctx: &IRContext, expr: super::parser::Assignment) -> IRExpression {}
 
-fn logical_to_ir(ctx: &IRContext, expr: super::parser::Logical) -> IRExpression {}
+fn logical_to_ir(ctx: &mut IRContext, expr: super::parser::Logical) -> IRExpression {
+    let left = to_ir(ctx, *expr.left, Some(Types::BOOL));
+    let right = to_ir(ctx, *expr.right, Some(Types::BOOL));
 
-fn if_to_ir(ctx: &IRContext, expr: super::parser::If) -> IRExpression {}
+    match expr.operator {
+        LogicalOperator::And => IRExpression::If(If {
+            ty: Types::BOOL,
+            test: Box::new(left),
+            consequent: Box::new(right),
+            alternate: Some(Box::new(IRExpression::Literal(Literal::U32(0)))),
+        }),
+        LogicalOperator::Or => IRExpression::If(If {
+            ty: Types::BOOL,
+            test: Box::new(left),
+            consequent: Box::new(IRExpression::Literal(Literal::U32(1))),
+            alternate: Some(Box::new(right)),
+        }),
+    }
+}
 
-fn member_to_ir(ctx: &IRContext, expr: super::parser::Member) -> IRExpression {}
+fn if_to_ir(ctx: &mut IRContext, expr: super::parser::If) -> IRExpression {
+    let test = to_ir(ctx, *expr.test, Some(Types::BOOL));
+    let consequent = to_ir(ctx, *expr.consequent, ctx.expected.clone());
+    let alternate = expr.alternate.map(|v| to_ir(ctx, *v, ctx.expected.clone()));
 
-fn index_to_ir(ctx: &IRContext, expr: super::parser::Index) -> IRExpression {}
+    IRExpression::If(If {
+        ty: consequent.ty(),
+        test: Box::new(test),
+        consequent: Box::new(consequent),
+        alternate: alternate.map(Box::new),
+    })
+}
+
+fn member_to_ir(ctx: &mut IRContext, expr: super::parser::Member) -> IRExpression {
+    let object = to_ir(ctx, *expr.object, None);
+
+    object.access(expr.property)
+}
+
+fn index_to_ir(ctx: &mut IRContext, expr: super::parser::Index) -> IRExpression {
+    let array = to_ir(
+        ctx,
+        *expr.object,
+        ctx.expected.map(|v| {
+            TypeInformation::Array(ArrayTypeInformation {
+                element_type: Box::new(v),
+                length: None,
+                is_ref: false,
+            })
+        }),
+    );
+
+    let index = to_ir(ctx, *expr.index, Some(Types::U32));
+
+    array.index(&index)
+}
 
 fn return_to_ir(ctx: &mut IRContext, expr: super::parser::Return) -> IRExpression {
     IRExpression::Return(Return {
