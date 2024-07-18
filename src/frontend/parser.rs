@@ -201,6 +201,24 @@ pub(crate) enum AssignmentOperator {
     BitshiftRight,
 }
 
+impl Into<BinaryOperator> for AssignmentOperator {
+    fn into(self) -> BinaryOperator {
+        match self {
+            AssignmentOperator::Plus => BinaryOperator::Plus,
+            AssignmentOperator::Minus => BinaryOperator::Minus,
+            AssignmentOperator::Star => BinaryOperator::Star,
+            AssignmentOperator::Slash => BinaryOperator::Slash,
+            AssignmentOperator::Remainder => BinaryOperator::Remainder,
+            AssignmentOperator::BitwiseAnd => BinaryOperator::And,
+            AssignmentOperator::BitwiseXor => BinaryOperator::Xor,
+            AssignmentOperator::BitwiseOr => BinaryOperator::Or,
+            AssignmentOperator::BitshiftLeft => BinaryOperator::BitshiftLeft,
+            AssignmentOperator::BitshiftRight => BinaryOperator::BitshiftRight,
+            AssignmentOperator::Base => panic!("cannot convert base assignment operator to binary"),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum LogicalOperator {
     And,

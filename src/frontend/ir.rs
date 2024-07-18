@@ -595,11 +595,29 @@ fn array_to_ir(ctx: &IRContext, expr: super::parser::Array) -> IRExpression {}
 
 fn object_to_ir(ctx: &IRContext, expr: super::parser::Object) -> IRExpression {}
 
-fn unary_to_ir(ctx: &IRContext, expr: super::parser::Unary) -> IRExpression {}
+fn unary_to_ir(ctx: &mut IRContext, expr: super::parser::Unary) -> IRExpression {
+    let arg = to_ir(ctx, *expr.argument, ctx.expected.clone());
 
-fn binary_to_ir(ctx: &IRContext, expr: super::parser::Binary) -> IRExpression {}
+    arg.unary_op(expr.operator)()
+}
 
-fn assignment_to_ir(ctx: &IRContext, expr: super::parser::Assignment) -> IRExpression {}
+fn binary_to_ir(ctx: &mut IRContext, expr: super::parser::Binary) -> IRExpression {
+    let left = to_ir(ctx, *expr.left, ctx.expected.clone());
+    let right = to_ir(ctx, *expr.right, Some(left.ty()));
+
+    left.binary_op(expr.operator)(&right)
+}
+
+fn assignment_to_ir(ctx: &mut IRContext, expr: super::parser::Assignment) -> IRExpression {
+    let mut variable = to_ir(ctx, *expr.left, ctx.expected.clone());
+
+    let ex = to_ir(ctx, *expr.right, Some(variable.ty()));
+    if matches!(expr.operator, AssignmentOperator::Base) {
+        return variable.set(&ex);
+    }
+
+    variable.set(&variable.binary_op(expr.operator.into())(&ex))
+}
 
 fn logical_to_ir(ctx: &mut IRContext, expr: super::parser::Logical) -> IRExpression {
     let left = to_ir(ctx, *expr.left, Some(Types::BOOL));
