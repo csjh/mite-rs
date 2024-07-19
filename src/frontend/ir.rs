@@ -709,4 +709,33 @@ fn sequence_to_ir(ctx: &mut IRContext, expr: super::parser::Sequence) -> IRExpre
     })
 }
 
-fn call_to_ir(ctx: &IRContext, expr: super::parser::Call) -> IRExpression {}
+fn call_to_ir(ctx: &mut IRContext, expr: super::parser::Call) -> IRExpression {
+    let func = to_ir(ctx, *expr.callee, None);
+
+    if let TypeInformation::Function(fn_ty) = func.ty() {
+        let thisless_params = if TypeId::of::<StructMethod>() == func.type_id() {
+            fn_ty.implementation.args.iter().skip(1)
+        } else {
+            fn_ty.implementation.args.iter().skip(0)
+        };
+
+        if thisless_params.len() != expr.arguments.len() {
+            panic!(
+                "Expected {} arguments, got {}",
+                thisless_params.len(),
+                expr.arguments.len()
+            );
+        }
+
+        let args = expr
+            .arguments
+            .into_iter()
+            .zip(thisless_params)
+            .map(|(arg, ty)| &to_ir(ctx, arg, Some(ty.ty)) as &dyn MiteType)
+            .collect::<Vec<&dyn MiteType>>();
+
+        return func.call(args);
+    }
+
+    panic!("non-function function calls not supported yet");
+}

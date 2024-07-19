@@ -184,7 +184,7 @@ pub(super) trait MiteType {
         panic!("Indexing on a non-array type {}", self.ty());
     }
     // call the value as a function
-    fn call(&self, args: Vec<Box<&dyn MiteType>>) -> &dyn MiteType {
+    fn call(&self, args: Vec<&dyn MiteType>) -> &dyn MiteType {
         args;
         panic!("Calling a non-function type {}", self.ty());
     }
