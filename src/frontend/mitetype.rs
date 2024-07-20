@@ -181,16 +181,16 @@ pub(super) trait MiteType {
     // access with [] operator
     fn index(&self, index: &dyn MiteType) -> &dyn MiteType {
         index;
-        panic!("Indexing on a non-array type {}", self.ty());
+        panic!("Indexing on a non-indexable type {}", self.ty());
     }
     // call the value as a function
     fn call(&self, args: Vec<&dyn MiteType>) -> &dyn MiteType {
         args;
-        panic!("Calling a non-function type {}", self.ty());
+        panic!("Calling a non-callable type {}", self.ty());
     }
     // get the full size of the value
     fn sizeof(&self) -> IRExpression {
-        panic!("Getting the size of a non-sizeable type {}", self.ty());
+        panic!("Getting the size of an unsized type {}", self.ty());
     }
     // get handler for unary operator
     fn unary_op(&self, op: UnaryOperator) -> Box<dyn FnOnce() -> IRExpression> {
