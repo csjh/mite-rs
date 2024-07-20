@@ -1,12 +1,15 @@
 use super::{
     mitetype::{
         ArrayTypeInformation, DirectFunction, FunctionInformation, FunctionTypeInformation,
-        MiteType, PrimitiveTypeInformation, StructTypeInformation, TypeInformation,
+        MiteType, PrimitiveTypeInformation, StructMethod, StructTypeInformation, TypeInformation,
     },
     type_initialization::{build_types, Types},
 };
 use crate::frontend::{mitetype::StringTypeInformation, parser::*, tokenizer::tokenize};
-use std::collections::HashMap;
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+};
 
 pub struct ResolvedImport {
     pub is_mite: bool,
